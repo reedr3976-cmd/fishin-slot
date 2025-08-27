@@ -1,0 +1,43 @@
+```html
+<!-- Main Slot Machine Container -->
+<div class="container">
+ <header>
+ <h1>Fishing Slots — Deep Sea Fortune</h1>
+ </header>
+ <!-- Reels Area -->
+ <section class="reels-box">
+ <div class="reels" id="reels">
+ <div class="reel" data-index="0"></div>
+ <div class="reel" data-index="1"></div>
+ <div class="reel" data-index="2"></div>
+ <div class="reel" data-index="3"></div>
+ <div class="reel" data-index="4"></div>
+ </div>
+ </section>
+ <!-- Controls -->
+ <div class="controls">
+ <div class="kpi">
+ <strong>Balance</strong>
+ <span id="balance">£1,000.00</span>
+ </div>
+ <div class="kpi">
+ <strong>Bet</strong>
+ <select id="bet">
+ <option value="10">£10</option>
+ <option value="20">£20</option>
+ <option value="50">£50</option>
+ <option value="100">£100</option>
+ </select>
+ </div>
+ </div>
+ <!-- Action Buttons -->
+ <div class="buttons-container">
+ <button id="spinBtn">SPIN</button>
+ <button id="autoBtn">AUTO</button>
+ <button id="rulesBtn">Rules</button>
+ <button id="resetBtn">Reset £</button>
+ </div>
+ <!-- Message display -->
+ <div class="message" id="message">Ready. Good luck!</div>
+</div>
+```

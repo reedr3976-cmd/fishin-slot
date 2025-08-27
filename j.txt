@@ -1,0 +1,169 @@
+```js
+// Symbols array with SVG icons
+const symbols = [
+ {
+ id: 'fish',
+ label: 'Fish',
+ weight: 30,
+ payout: {2: 5, 3: 20},
+ svg: `<svg viewBox="0 0 64 64" fill="#00cec9" xmlns="http://www.w3.org/2000/svg" width="60" height="60"><ellipse cx="32" cy="32" rx="20" ry="10"/><circle cx="50" cy="32" r="4"/></svg>`
+ },
+ {
+ id: 'treasure',
+ label: 'Treasure',
+ weight: 15,
+ payout: {2: 10, 3: 50},
+ svg: `<svg viewBox="0 0 64 64" fill="#ffd700" xmlns="http://www.w3.org/2000/svg" width="60" height="60"><rect x="24" y="20" width="16" height="24" rx="4" fill="#ffd700"/><circle cx="32" cy="28" r="4"/></svg>`
+ },
+ {
+ id: 'fishboat',
+ label: 'Fish Boat',
+ weight: 10,
+ payout: {2: 15, 3: 75},
+ svg: `<svg viewBox="0 0 64 64" fill="#6c5ce7" xmlns="http://www.w3.org/2000/svg" width="60" height="60"><polygon points="8,56 32,8 56,56" fill="#6c5ce7"/><rect x="28" y="20" width="8" height="10" fill="#444"/></svg>`
+ },
+ {
+ id: 'lure',
+ label: 'Lure',
+ weight: 20,
+ payout: {2: 8, 3: 40},
+ svg: `<svg viewBox="0 0 64 64" fill="#e17055" xmlns="http://www.w3.org/2000/svg" width="60" height="60"><rect x="20" y="10" width="24" height="44" rx="4" fill="#e17055"/><circle cx="32" cy="22" r="4"/></svg>`
+ },
+ {
+ id: 'goldfish',
+ label: 'Golden Fish',
+ weight: 8,
+ payout: {2: 50, 3: 200},
+ svg: `<svg viewBox="0 0 64 64" fill="#ffd700" xmlns="http://www.w3.org/2000/svg" width="60" height="60"><circle cx="32" cy="32" r="20" fill="#ffd700"/><circle cx="40" cy="28" r="4"/></svg>`
+ }
+];
+
+const weightedSymbols = [];
+symbols.forEach(s => {
+ for(let i=0; i<s.weight; i++) {
+ weightedSymbols.push(s);
+ }
+});
+
+let balance = 1000;
+let currentBet = parseInt(document.getElementById('bet').value);
+let autoMode = false;
+let spinning = false;
+
+const balanceEl = document.getElementById('balance');
+const messageEl = document.getElementById('message');
+
+function updateBalance() {
+ balanceEl.textContent = `£${balance.toFixed(2)}`;
+}
+function showMessage(msg) {
+ messageEl.textContent = msg;
+}
+
+function getRandomSymbol() {
+ return weightedSymbols[Math.floor(Math.random() * weightedSymbols.length)];
+}
+
+// Initialize reels
+function initReels() {
+ document.querySelectorAll('.reel').forEach(reel => {
+ reel.innerHTML = '';
+ for (let i=0; i<3; i++) {
+ const sym = getRandomSymbol();
+ const div = document.createElement('div');
+ div.className='symbol';
+ div.innerHTML=sym.svg;
+ reel.appendChild(div);
+ }
+ });
+}
+initReels();
+
+async function spin() {
+ if (spinning || balance < currentBet) return;
+ spinning = true;
+ showMessage('Spinning...');
+ balance -= currentBet;
+ updateBalance();
+
+ const reels = document.querySelectorAll('.reel');
+
+ // Animate spinning
+ for (const reel of reels) {
+ reel.style.transition = 'transform 0.5s ease-in-out';
+ reel.style.transform = 'translateY(-20px)';
+ }
+ await new Promise(r => setTimeout(r, 600));
+ reels.forEach(reel => {
+ reel.style.transform='translateY(0)';
+ reel.innerHTML=''; // Clear old symbols
+ for (let i=0; i<3; i++) {
+ const sym = getRandomSymbol();
+ const div = document.createElement('div');
+ div.className='symbol';
+ div.innerHTML=sym.svg;
+ reel.appendChild(div);
+ }
+ });
+ evaluateResults();
+ spinning = false;
+ if(autoMode) {
+ setTimeout(spin, 500);
+ }
+}
+
+function evaluateResults() {
+ const reels = document.querySelectorAll('.reel');
+ const middleSymbols = Array.from(reels).map(r => r.children[1]);
+ const symbolHTML = middleSymbols[0].innerHTML;
+ const matchCount = middleSymbols.filter(s => s.innerHTML===symbolHTML).length;
+ const symbolData = symbols.find(s => s.svg===symbolHTML);
+ if (!symbolData) {
+ showMessage('No win, try again!');
+ return;
+ }
+ const payoutAmount = symbolData.payout[matchCount] || 0;
+ if(payoutAmount > 0){
+ const winnings = payoutAmount * (currentBet / 10);
+ balance += winnings;
+ showMessage(`Winner! +£${winnings.toFixed(2)}`);
+ } else {
+ showMessage('No win, try again!');
+ }
+ updateBalance();
+}
+
+// Button events
+document.getElementById('spinBtn').onclick = spin;
+document.getElementById('resetBtn').onclick = () => {
+ balance=1000; updateBalance(); showMessage('Balance reset to £1000');
+};
+document.getElementById('autoBtn').onclick = () => {
+ autoMode = !autoMode;
+ if(autoMode) {
+ document.getElementById('autoBtn').textContent='STOP';
+ autoPlay();
+ } else {
+ document.getElementById('autoBtn').textContent='AUTO';
+ }
+};
+document.getElementById('bet').onchange = () => {
+ currentBet = parseInt(document.getElementById('bet').value);
+ updateBalance();
+};
+
+// Auto play
+function autoPlay() {
+ if(autoMode && balance>=currentBet) {
+ spin();
+ setTimeout(autoPlay, 600);
+ } else {
+ autoMode = false;
+ document.getElementById('autoBtn').textContent='AUTO';
+ }
+}
+
+// Initialize
+updateBalance();
+showMessage('Good luck!');
+```
