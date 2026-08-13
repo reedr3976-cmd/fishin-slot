@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Market Scanner CLI — alerts & analysis only (no trading).
+"""Daily Market Scanner CLI — ranked alerts & analysis only (no trading).
 
 Examples:
-  python run_scanner.py --demo
-  python run_scanner.py --live
-  python run_scanner.py --live --assets forex,crypto,commodity --tf 1d
-  python run_scanner.py --live --symbols EURUSD,BTCUSD,XAUUSD --tf 1h,1d
+  python3 run_scanner.py --live
+  python3 run_scanner.py --demo
+  python3 run_scanner.py --live --symbols EURUSD,BTCUSD,XAUUSD --tf 1d
+  python3 run_scanner.py --live --tf 1h,1d
 """
 
 from __future__ import annotations
@@ -14,27 +14,30 @@ import argparse
 import sys
 from pathlib import Path
 
-# Ensure local imports resolve when run as a script
 ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from config import DEFAULT_TIMEFRAMES, INSTRUMENTS, TIMEFRAMES
-from scanner import scan_markets, write_outputs
+from config import DAILY_TIMEFRAMES, INSTRUMENTS, TIMEFRAMES
+from scanner import scan_opportunities, write_outputs
+from scanner.report import build_daily_summary
+from scanner.setups import SetupAlert
 
 
 BANNER = """
 ╔══════════════════════════════════════════════════════════╗
-║   MARKET SCANNER  ·  Alerts & Analysis Only              ║
+║   DAILY MARKET SCANNER  ·  Alerts & Analysis Only        ║
 ║   Forex · Crypto · Commodities                           ║
 ║   NO brokerage connection · NO order placement           ║
 ╚══════════════════════════════════════════════════════════╝
 """
 
+STRENGTH_RANK = {"low": 1, "medium": 2, "high": 3}
+
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
-        description="Scan markets for technical setups (alerts only, no trading)."
+        description="Ranked daily market scanner (alerts only, no trading)."
     )
     mode = p.add_mutually_exclusive_group()
     mode.add_argument(
@@ -56,8 +59,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--tf",
         type=str,
-        default=",".join(DEFAULT_TIMEFRAMES),
-        help=f"Comma list of timeframes. Options: {','.join(TIMEFRAMES)}",
+        default=None,
+        help=(
+            f"Comma list of timeframes. Default (daily report): {','.join(DAILY_TIMEFRAMES)}. "
+            f"Options: {','.join(TIMEFRAMES)}"
+        ),
     )
     p.add_argument(
         "--assets",
@@ -69,17 +75,13 @@ def build_parser() -> argparse.ArgumentParser:
         "--min-strength",
         choices=["low", "medium", "high"],
         default="low",
-        help="Filter alerts below this strength (default: low = show all).",
+        help="Only include actionable opportunities at/above this confidence.",
     )
     return p
 
 
-STRENGTH_RANK = {"low": 1, "medium": 2, "high": 3}
-
-
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    # Default: public Yahoo data (no key). Use --demo for offline/synthetic.
     demo = bool(args.demo)
 
     symbols = None
@@ -91,7 +93,11 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Known: {', '.join(INSTRUMENTS)}")
             return 2
 
-    timeframes = [t.strip() for t in args.tf.split(",") if t.strip()]
+    timeframes = (
+        [t.strip() for t in args.tf.split(",") if t.strip()]
+        if args.tf
+        else list(DAILY_TIMEFRAMES)
+    )
     bad_tf = [t for t in timeframes if t not in TIMEFRAMES]
     if bad_tf:
         print(f"Unknown timeframes: {', '.join(bad_tf)}")
@@ -103,62 +109,65 @@ def main(argv: list[str] | None = None) -> int:
         assets = [a.strip().lower() for a in args.assets.split(",") if a.strip()]
 
     print(BANNER)
-    mode_label = "DEMO (cached/synthetic historical)" if demo else "LIVE PUBLIC DATA (Yahoo Finance, no API key)"
+    mode_label = (
+        "DEMO (cached/synthetic historical)"
+        if demo
+        else "LIVE PUBLIC DATA (Yahoo Finance, no API key)"
+    )
     print(f"Mode:        {mode_label}")
-    print(f"Instruments: {', '.join(symbols) if symbols else 'ALL (' + str(len(INSTRUMENTS)) + ')'}")
+    print(
+        f"Instruments: {', '.join(symbols) if symbols else 'ALL (' + str(len(INSTRUMENTS)) + ')'}"
+    )
     print(f"Timeframes:  {', '.join(timeframes)}")
     print(f"Assets:      {', '.join(assets) if assets else 'forex, crypto, commodity'}")
     print("-" * 60)
 
-    alerts, snapshots, errors = scan_markets(
+    opportunities, snapshots, errors = scan_opportunities(
         symbols, timeframes, demo=demo, asset_classes=assets
     )
 
     min_rank = STRENGTH_RANK[args.min_strength]
-    alerts = [a for a in alerts if STRENGTH_RANK.get(a.strength, 0) >= min_rank]
-
-    out_path = write_outputs(alerts, snapshots, errors)
-
-    # Snapshots table
-    print("\nPRICE SNAPSHOTS")
-    print(f"{'Instrument':<10} {'TF':<4} {'Class':<10} {'Last':>14} {'RSI':>7} {'Bars':>6}")
-    print("-" * 60)
-    for s in snapshots:
-        rsi = s.get("rsi")
-        rsi_s = f"{rsi:.1f}" if isinstance(rsi, (int, float)) else "-"
-        print(
-            f"{s['instrument']:<10} {s['timeframe']:<4} {s['asset_class']:<10} "
-            f"{s['last_close']:>14.6g} {rsi_s:>7} {s['bars']:>6}"
-        )
-
-    # Alerts
-    print("\nSETUP ALERTS (analysis only — do not auto-trade)")
-    if not alerts:
-        print("  (no setups matched current thresholds)")
-    else:
-        # Prefer actionable (medium/high) first
-        ordered = sorted(
-            alerts,
-            key=lambda a: (-STRENGTH_RANK.get(a.strength, 0), a.instrument, a.timeframe),
-        )
-        for a in ordered:
-            flag = {"bullish": "▲", "bearish": "▼", "neutral": "●"}.get(a.side, "●")
-            print(
-                f"  {flag} [{a.strength.upper():<6}] {a.instrument:<8} {a.timeframe:<4} "
-                f"{a.setup:<22} @ {a.price}"
+    alerts: list[SetupAlert] = []
+    for opp in opportunities:
+        if opp.confidence == "NO STRONG SETUP":
+            continue
+        strength = opp.confidence.lower()
+        if STRENGTH_RANK.get(strength, 0) < min_rank:
+            continue
+        alerts.append(
+            SetupAlert(
+                instrument=opp.instrument,
+                name=opp.name,
+                asset_class=opp.asset_class,
+                timeframe=opp.timeframe,
+                setup=f"score_{opp.score}",
+                side=opp.direction,
+                strength=strength,
+                price=opp.price,
+                message=opp.reason,
+                metrics={
+                    "rsi": opp.rsi,
+                    "sma_fast": opp.sma20,
+                    "sma_slow": opp.sma50,
+                    "atr": opp.atr,
+                    "score": opp.score,
+                    "support": opp.support,
+                    "resistance": opp.resistance,
+                },
+                scanned_at=opp.scanned_at,
             )
-            print(f"      {a.message}")
+        )
 
-    if errors:
-        print("\nFETCH NOTES")
-        for e in errors:
-            print(f"  ! {e}")
+    out_path = write_outputs(
+        alerts, snapshots, errors, opportunities, mode_label=mode_label
+    )
 
-    print("\n" + "=" * 60)
-    print(f"SCAN COMPLETE — {len(snapshots)} snapshots, {len(alerts)} alerts")
-    print(f"Saved: {out_path}")
+    summary = build_daily_summary(opportunities, mode_label=mode_label, errors=errors)
+    print(summary)
+    print(f"Saved JSON: {out_path}")
+    print("Saved beginner text: output/daily_summary.txt")
+    print("Saved CSV: output/latest_alerts.csv")
     print("Reminder: alerts only. No trades placed. Not financial advice.")
-    print("=" * 60)
     return 0 if snapshots else 1
 
 

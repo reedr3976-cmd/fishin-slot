@@ -1,93 +1,67 @@
-# Market Scanner
+# Daily Market Scanner
 
-Beginner-friendly **alerts & analysis only** scanner for:
+Beginner-friendly **ranked daily report** for:
 
 - **Forex:** EURUSD, GBPUSD, USDJPY, AUDUSD, USDCAD, USDCHF  
 - **Crypto:** BTCUSD, ETHUSD, SOLUSD  
 - **Commodities:** Gold (XAUUSD), Silver (XAGUSD), Oil (USOIL)
 
-It **does not** connect to a brokerage, place orders, or require passwords / API keys / seed phrases.
+**Alerts & analysis only** — no brokerage connection, no order placement, no API keys, no passwords.
 
-## What this environment already had
+## What you get each run
 
-| Capability | Status |
-|---|---|
-| Python 3.12, NumPy, Requests | Available |
-| Network egress | Open (public HTTPS works) |
-| Yahoo Finance public chart API | Works **without API key** (forex, crypto, gold/silver/oil) |
-| CoinGecko / Coinbase / Kraken public endpoints | Reachable (not required for v1) |
-| Binance | Blocked in this region (not used) |
-| Brokerage / trading APIs | **Not used** (by design) |
+For every scanned market the report shows:
 
-## Requirements — nothing paid, no secrets
+- instrument & current price  
+- bullish / bearish / **neutral** direction  
+- timeframe  
+- confidence: **HIGH / MEDIUM / LOW** or **NO STRONG SETUP**  
+- plain-English reason  
+- RSI, SMA20/SMA50 relationship, MACD condition  
+- ATR / volatility note  
+- nearby support & resistance  
 
-| Item | Required now? | Why |
-|---|---|---|
-| API key | **No** | Uses Yahoo Finance public chart endpoints |
-| Paid data vendor | **No** | Public delayed/quote data is enough for scanning |
-| Brokerage account | **No** | Alerts only — no execution |
-| Extra downloads on this Cloud Agent | **No** | Uses already-installed `numpy` + `requests` |
-| Extra downloads on your own PC | Only if missing | `pip install -r requirements.txt` (numpy, requests) |
-
-If you later want denser intraday data, news, or broker-synced positions, that would need a **separate** discussion before any signup — and you should **never** paste passwords, private keys, seed phrases, or brokerage credentials into chat.
+Results are ranked strongest-first. Weak/mixed markets show **NO STRONG SETUP** instead of forcing a signal.
 
 ## Quick start
 
 ```bash
 cd market_scanner
 
-# Offline / synthetic historical (always works)
+# Beginner daily report (default timeframe: 1d)
+python3 run_scanner.py --live
 python3 run_scanner.py --demo
 
-# Public live quotes via Yahoo (no key)
-python3 run_scanner.py --live
+# Multi-timeframe
+python3 run_scanner.py --live --tf 1h,1d
 
-# Focused scan
-python3 run_scanner.py --live --symbols EURUSD,BTCUSD,XAUUSD --tf 1h,1d
-python3 run_scanner.py --live --assets forex,commodity --tf 1d --min-strength medium
+# One example from each asset class
+python3 run_scanner.py --live --symbols EURUSD,BTCUSD,XAUUSD --tf 1d
 ```
 
-## Prove it works
+Outputs:
 
-A successful run prints:
+- `output/daily_summary.txt` — plain-English beginner report  
+- `output/daily_summary.json` — structured opportunities  
+- `output/latest_alerts.json` / `.csv` — machine-readable copy  
 
-1. A banner stating **NO brokerage / NO orders**
-2. A **PRICE SNAPSHOTS** table (instrument, timeframe, last price, RSI)
-3. **SETUP ALERTS** (RSI extremes, SMA crosses, MACD crosses, Bollinger touches, trend alignment)
-4. Paths to saved files: `output/latest_alerts.json` and `output/latest_alerts.csv`
+## Requirements
 
-Unit tests (offline):
+| Item | Required? |
+|---|---|
+| API key | **No** (Yahoo Finance public chart data) |
+| Brokerage account | **No** |
+| Secrets / passwords | **Never paste these into chat** |
+| Extra packages here | **No** (`numpy` + `requests` already present) |
+
+On your own PC, if needed: `pip install -r requirements.txt`
+
+## Tests
 
 ```bash
 python3 -m unittest discover -s tests -v
 ```
 
-## Setups detected
-
-| Setup | Meaning (watchlist only) |
-|---|---|
-| `rsi_oversold` / `rsi_overbought` | RSI ≤ 30 or ≥ 70 |
-| `rsi_exit_oversold` / `rsi_exit_overbought` | RSI leaving extreme zone |
-| `sma_golden_cross` / `sma_death_cross` | SMA20 crosses SMA50 |
-| `trend_aligned_bullish` / `bearish` | Price + MA structure aligned |
-| `macd_bullish_cross` / `macd_bearish_cross` | MACD vs signal cross |
-| `bb_lower_touch` / `bb_upper_touch` | Price at Bollinger band |
-
-## Action you may need to take
-
-**On this Cloud Agent:** none for the initial scanner — it is already runnable.
-
-**On your own computer (optional):**
-
-1. Install Python 3.10+  
-2. `cd market_scanner && pip install -r requirements.txt`  
-3. Run `python3 run_scanner.py --live` or `--demo`
-
-No account signup is required for this version.
-
 ## Safety
 
-- Output is **analysis / alerts only**
-- Not financial advice
-- Public data can be delayed or differ from a broker’s feed
-- Futures symbols (GC=F, SI=F, CL=F) are **proxies** for gold, silver, and oil education — not a substitute for your broker’s contract specs
+Educational analysis only. Not financial advice. Public data may be delayed. Gold/silver/oil use public futures proxies (GC=F, SI=F, CL=F).
