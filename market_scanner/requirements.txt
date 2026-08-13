@@ -1,0 +1,8 @@
+# Optional — only needed if you want packages beyond the cloud environment defaults.
+# This scanner runs with Python 3.10+ standard library + numpy + requests
+# (both already available in the Cursor Cloud Agent environment).
+#
+# If you run on your own machine and lack them:
+#   pip install -r requirements.txt
+numpy>=1.26
+requests>=2.31
