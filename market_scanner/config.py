@@ -50,7 +50,23 @@ ATR_PERIOD = 14
 # Polite delay between Yahoo requests (seconds)
 REQUEST_DELAY_SEC = 0.35
 
+# Daily scanner ranking thresholds (0–100 confidence score)
+# Below SCORE_LOW => "NO STRONG SETUP" (do not force a trade idea)
+SCORE_HIGH = 60
+SCORE_MEDIUM = 40
+SCORE_LOW = 25
+
+# Default timeframes for the beginner daily report
+DAILY_TIMEFRAMES = ["1d"]
+
+# Swing lookback for support / resistance
+SR_LOOKBACK = 40
+SR_PIVOT_LEFT = 2
+SR_PIVOT_RIGHT = 2
+
 # Output
 OUTPUT_DIR = "output"
 ALERTS_JSON = "output/latest_alerts.json"
 ALERTS_CSV = "output/latest_alerts.csv"
+DAILY_SUMMARY_TXT = "output/daily_summary.txt"
+DAILY_SUMMARY_JSON = "output/daily_summary.json"

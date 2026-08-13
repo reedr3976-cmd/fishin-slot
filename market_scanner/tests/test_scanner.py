@@ -12,9 +12,13 @@ sys.path.insert(0, str(ROOT))
 import numpy as np
 
 from indicators import bollinger, ema, macd, rsi, sma
+from models import CandleSeries
 from providers.yahoo import load_or_build_demo
+from scanner import scan_markets, scan_opportunities, write_outputs
+from scanner.levels import nearest_levels
+from scanner.opportunity import evaluate_opportunity, rank_opportunities
+from scanner.report import build_daily_summary
 from scanner.setups import analyze_series
-from scanner import scan_markets, write_outputs
 
 
 class IndicatorTests(unittest.TestCase):
@@ -52,6 +56,67 @@ class IndicatorTests(unittest.TestCase):
         self.assertGreater(m[-1], l[-1])
 
 
+class LevelsTests(unittest.TestCase):
+    def test_nearest_levels_order(self):
+        close = np.linspace(100, 110, 60)
+        high = close + 1
+        low = close - 1
+        levels = nearest_levels(close, high, low, sma20=105.0, sma50=102.0)
+        self.assertIsNotNone(levels["support"])
+        self.assertIsNotNone(levels["resistance"])
+        self.assertLess(levels["support"], close[-1])
+        self.assertGreater(levels["resistance"], close[-1])
+
+
+class OpportunityTests(unittest.TestCase):
+    def test_evaluate_returns_card(self):
+        series = load_or_build_demo("EURUSD", "1d")
+        opp = evaluate_opportunity(series, "Euro / US Dollar")
+        self.assertEqual(opp.instrument, "EURUSD")
+        self.assertIn(opp.confidence, ("HIGH", "MEDIUM", "LOW", "NO STRONG SETUP"))
+        self.assertIn(opp.direction, ("bullish", "bearish", "neutral"))
+        self.assertGreaterEqual(opp.score, 0)
+        self.assertLessEqual(opp.score, 100)
+        self.assertTrue(opp.reason)
+        self.assertTrue(opp.sma_relation)
+        self.assertTrue(opp.macd_condition)
+
+    def test_flat_market_is_no_strong_setup(self):
+        n = 80
+        close = np.full(n, 100.0)
+        # tiny noise so indicators compute but stay mixed/flat
+        rng = np.random.default_rng(1)
+        close = close + rng.normal(0, 0.01, n)
+        high = close + 0.05
+        low = close - 0.05
+        series = CandleSeries(
+            instrument="FLAT",
+            symbol="FLAT",
+            asset_class="forex",
+            timeframe="1d",
+            timestamps=np.arange(n, dtype=np.int64) * 86400,
+            open=close.copy(),
+            high=high,
+            low=low,
+            close=close,
+            volume=np.ones(n),
+        )
+        opp = evaluate_opportunity(series, "Flat")
+        self.assertEqual(opp.confidence, "NO STRONG SETUP")
+
+    def test_rank_puts_high_first(self):
+        a = evaluate_opportunity(load_or_build_demo("BTCUSD", "1d"), "Bitcoin")
+        b = evaluate_opportunity(load_or_build_demo("EURUSD", "1d"), "Euro")
+        c = evaluate_opportunity(load_or_build_demo("XAUUSD", "1d"), "Gold")
+        ranked = rank_opportunities([a, b, c])
+        scores = [o.score for o in ranked]
+        # confidence order respected: sort key ensures non-increasing confidence rank
+        order = {"HIGH": 0, "MEDIUM": 1, "LOW": 2, "NO STRONG SETUP": 3}
+        ranks = [order[o.confidence] for o in ranked]
+        self.assertEqual(ranks, sorted(ranks))
+        self.assertEqual(len(scores), 3)
+
+
 class DemoScanTests(unittest.TestCase):
     def test_demo_fetch(self):
         series = load_or_build_demo("EURUSD", "1d")
@@ -63,7 +128,27 @@ class DemoScanTests(unittest.TestCase):
         alerts = analyze_series(series, "Bitcoin")
         self.assertIsInstance(alerts, list)
 
-    def test_full_demo_scan(self):
+    def test_full_demo_scan_all_classes(self):
+        opps, snapshots, errors = scan_opportunities(
+            ["EURUSD", "BTCUSD", "XAUUSD"],
+            ["1d"],
+            demo=True,
+        )
+        self.assertEqual(len(snapshots), 3)
+        self.assertEqual(len(opps), 3)
+        self.assertEqual(errors, [])
+        classes = {o.asset_class for o in opps}
+        self.assertEqual(classes, {"forex", "crypto", "commodity"})
+        path = write_outputs([], snapshots, errors, opps, mode_label="demo")
+        self.assertTrue(path.exists())
+        summary = Path("output/daily_summary.txt")
+        self.assertTrue(summary.exists())
+        text = summary.read_text(encoding="utf-8")
+        self.assertIn("DAILY MARKET SCANNER", text)
+        self.assertIn("NO STRONG SETUP", text)
+        self.assertIn("FOREX", text.upper())  # by-market section uses FOREX:
+
+    def test_legacy_scan_markets(self):
         alerts, snapshots, errors = scan_markets(
             ["EURUSD", "BTCUSD", "XAUUSD"],
             ["1d"],
@@ -71,9 +156,18 @@ class DemoScanTests(unittest.TestCase):
         )
         self.assertEqual(len(snapshots), 3)
         self.assertEqual(errors, [])
-        path = write_outputs(alerts, snapshots, errors)
-        self.assertTrue(path.exists())
-        self.assertGreater(path.stat().st_size, 50)
+
+    def test_beginner_summary_mentions_all_classes(self):
+        opps, _, _ = scan_opportunities(
+            ["EURUSD", "BTCUSD", "XAUUSD"],
+            ["1d"],
+            demo=True,
+        )
+        text = build_daily_summary(opps, mode_label="demo test")
+        self.assertIn("EURUSD", text)
+        self.assertIn("BTCUSD", text)
+        self.assertIn("XAUUSD", text)
+        self.assertIn("BY MARKET TYPE", text)
 
 
 if __name__ == "__main__":
