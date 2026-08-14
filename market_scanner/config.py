@@ -70,3 +70,36 @@ ALERTS_JSON = "output/latest_alerts.json"
 ALERTS_CSV = "output/latest_alerts.csv"
 DAILY_SUMMARY_TXT = "output/daily_summary.txt"
 DAILY_SUMMARY_JSON = "output/daily_summary.json"
+
+# ---------------------------------------------------------------------------
+# Historical backtest settings (analysis only — does not change live rules)
+# ---------------------------------------------------------------------------
+# Longer Yahoo ranges used only by the backtester (live scanner ranges unchanged).
+BACKTEST_TIMEFRAMES: dict[str, dict[str, str]] = {
+    "1h": {"interval": "60m", "range": "60d"},
+    "4h": {"interval": "60m", "range": "60d"},
+    "1d": {"interval": "1d", "range": "5y"},
+    "1wk": {"interval": "1wk", "range": "10y"},
+}
+
+# Forward holding period in bars after a signal (close-to-close).
+FORWARD_BARS: dict[str, int] = {
+    "1h": 6,   # ~6 hours
+    "4h": 4,   # ~16 hours
+    "1d": 5,   # ~1 trading week
+    "1wk": 4,  # ~1 month
+}
+
+# Round-trip cost assumptions (fraction of price): spread + slippage proxy.
+# Applied once per signal (entry+exit). Not a broker model — educational only.
+ROUND_TRIP_COST: dict[str, float] = {
+    "forex": 0.0004,      # ~4 bps
+    "crypto": 0.0020,     # ~20 bps
+    "commodity": 0.0010,  # ~10 bps
+}
+
+BACKTEST_WARMUP_BARS = 60  # need SMA50 + buffer before first signal
+MIN_SIGNALS_FOR_CONCLUSION = 30  # below this, report is marked unreliable
+BACKTEST_DEFAULT_TIMEFRAMES = ["1d", "1wk"]
+BACKTEST_REPORT_TXT = "output/backtest_report.txt"
+BACKTEST_REPORT_JSON = "output/backtest_report.json"

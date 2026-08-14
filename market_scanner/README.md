@@ -56,6 +56,21 @@ Outputs:
 
 On your own PC, if needed: `pip install -r requirements.txt`
 
+## Historical backtest (confidence ratings)
+
+Before trusting HIGH / MEDIUM / LOW labels, run an unbiased historical check:
+
+```bash
+cd market_scanner
+python3 run_backtest.py --live --tf 1d,1wk
+python3 run_backtest.py --demo   # offline synthetic
+```
+
+- Uses the **same** `evaluate_opportunity()` rules as the live scanner (not tuned for prettier results)
+- No look-ahead: each signal uses only bars available at that time
+- Reports win rate, average return, winners/losers, profit factor, max drawdown by confidence, asset class, and timeframe
+- Writes `output/backtest_report.txt` and `output/backtest_report.json`
+
 ## Tests
 
 ```bash
