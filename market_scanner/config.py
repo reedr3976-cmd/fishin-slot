@@ -6,6 +6,7 @@ Alerts and analysis only — no brokerage connection, no order placement.
 from __future__ import annotations
 
 # Public Yahoo Finance chart symbols (no API key).
+# Full catalog kept here — crypto remains available but is disabled by default.
 INSTRUMENTS: dict[str, dict[str, str]] = {
     # Forex
     "EURUSD": {"symbol": "EURUSD=X", "asset_class": "forex", "name": "Euro / US Dollar"},
@@ -14,7 +15,7 @@ INSTRUMENTS: dict[str, dict[str, str]] = {
     "AUDUSD": {"symbol": "AUDUSD=X", "asset_class": "forex", "name": "Australian Dollar / US Dollar"},
     "USDCAD": {"symbol": "USDCAD=X", "asset_class": "forex", "name": "US Dollar / Canadian Dollar"},
     "USDCHF": {"symbol": "USDCHF=X", "asset_class": "forex", "name": "US Dollar / Swiss Franc"},
-    # Cryptocurrency
+    # Cryptocurrency (kept in catalog; excluded from active universe by default)
     "BTCUSD": {"symbol": "BTC-USD", "asset_class": "crypto", "name": "Bitcoin / US Dollar"},
     "ETHUSD": {"symbol": "ETH-USD", "asset_class": "crypto", "name": "Ethereum / US Dollar"},
     "SOLUSD": {"symbol": "SOL-USD", "asset_class": "crypto", "name": "Solana / US Dollar"},
@@ -23,6 +24,24 @@ INSTRUMENTS: dict[str, dict[str, str]] = {
     "XAGUSD": {"symbol": "SI=F", "asset_class": "commodity", "name": "Silver (COMEX)"},
     "USOIL": {"symbol": "CL=F", "asset_class": "commodity", "name": "Crude Oil WTI (NYMEX)"},
 }
+
+# Active scan universe: Forex + commodities only (crypto disabled by default).
+# Pass asset_classes=["crypto"] or include crypto explicitly to re-enable.
+ENABLED_ASSET_CLASSES: tuple[str, ...] = ("forex", "commodity")
+
+
+def active_instruments(
+    asset_classes: tuple[str, ...] | list[str] | None = None,
+) -> dict[str, dict[str, str]]:
+    """Return instruments in the active universe (crypto off by default)."""
+    classes = tuple(asset_classes) if asset_classes is not None else ENABLED_ASSET_CLASSES
+    allowed = set(classes)
+    return {k: v for k, v in INSTRUMENTS.items() if v["asset_class"] in allowed}
+
+
+def default_asset_classes() -> list[str]:
+    return list(ENABLED_ASSET_CLASSES)
+
 
 # Yahoo interval -> (chart interval, range string)
 TIMEFRAMES: dict[str, dict[str, str]] = {

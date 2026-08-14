@@ -61,8 +61,8 @@ def build_daily_summary(
     lines: list[str] = [
         "╔══════════════════════════════════════════════════════════╗",
         "║          DAILY MARKET SCANNER  ·  Beginner Report        ║",
-        "║     Forex · Crypto · Gold/Silver/Oil  ·  Alerts Only     ║",
-        "║     NO brokerage  ·  NO passwords  ·  NO auto-trading    ║",
+        "║     Forex · Gold/Silver/Oil  ·  Alerts Only              ║",
+        "║     Crypto disabled by default  ·  NO auto-trading       ║",
         "╚══════════════════════════════════════════════════════════╝",
         "",
         f"Data mode: {mode_label}",
@@ -74,6 +74,7 @@ def build_daily_summary(
         "  • HIGH / MEDIUM / LOW = how clearly indicators agree right now",
         "  • NO STRONG SETUP = wait — do not force a trade idea",
         "  • This is educational analysis only, not financial advice",
+        "  • Active universe = Forex + commodities (crypto off unless re-enabled)",
     ]
 
     def dump(title: str, items: list[Opportunity], empty_msg: str) -> None:
@@ -99,7 +100,7 @@ def build_daily_summary(
     actionable = [o for o in ranked if o.confidence in ("HIGH", "MEDIUM")]
     if not actionable:
         lines.append(
-            "  Nothing stands out as a strong setup across Forex, crypto, and commodities."
+            "  Nothing stands out as a strong setup across Forex and commodities."
         )
         lines.append("  Sitting in cash / waiting is a valid choice.")
     else:
@@ -110,9 +111,10 @@ def build_daily_summary(
                 f"[{opp.confidence} {opp.score}] — {opp.reason[:110]}"
             )
 
-    # Per asset-class one-liners
+    # Per asset-class one-liners (only classes present in this scan)
     lines.append(_section_header("BY MARKET TYPE"))
-    for cls in ("forex", "crypto", "commodity"):
+    present = sorted({o.asset_class for o in ranked})
+    for cls in present:
         subset = [o for o in ranked if o.asset_class == cls]
         best = next((o for o in subset if o.confidence != "NO STRONG SETUP"), None)
         if best is None:
@@ -122,6 +124,8 @@ def build_daily_summary(
                 f"  {cls.upper()}: best watch = {best.instrument} {best.timeframe} "
                 f"{best.direction} [{best.confidence} {best.score}] @ {format_price(best.price)}"
             )
+    if "crypto" not in present:
+        lines.append("  CRYPTO: disabled in active universe (code still available)")
 
     if errors:
         lines.append(_section_header("DATA NOTES"))

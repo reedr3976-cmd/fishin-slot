@@ -18,6 +18,7 @@ from config import (
     INSTRUMENTS,
     ROUND_TRIP_COST,
     SMA_SLOW,
+    active_instruments,
 )
 from models import CandleSeries
 from providers.yahoo import DataFetchError, fetch_instrument
@@ -127,8 +128,11 @@ def load_series_map(
     *,
     demo: bool = False,
 ) -> tuple[dict[tuple[str, str], CandleSeries], list[str], int]:
-    """Fetch all series once for reuse across original/revised comparisons."""
-    keys = list(instruments) if instruments else list(INSTRUMENTS.keys())
+    """Fetch series once for reuse across original/revised comparisons.
+
+    Default instrument list = active universe (forex + commodities; crypto off).
+    """
+    keys = list(instruments) if instruments else list(active_instruments().keys())
     tfs = list(timeframes) if timeframes else list(BACKTEST_DEFAULT_TIMEFRAMES)
     session = requests.Session()
     series_map: dict[tuple[str, str], CandleSeries] = {}

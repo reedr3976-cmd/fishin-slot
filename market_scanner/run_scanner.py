@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from config import DAILY_TIMEFRAMES, INSTRUMENTS, TIMEFRAMES
+from config import DAILY_TIMEFRAMES, INSTRUMENTS, TIMEFRAMES, active_instruments, default_asset_classes
 from scanner import scan_opportunities, write_outputs
 from scanner.report import build_daily_summary
 from scanner.setups import SetupAlert
@@ -27,7 +27,7 @@ from scanner.setups import SetupAlert
 BANNER = """
 ╔══════════════════════════════════════════════════════════╗
 ║   DAILY MARKET SCANNER  ·  Alerts & Analysis Only        ║
-║   Forex · Crypto · Commodities                           ║
+║   Forex · Commodities  (crypto disabled by default)      ║
 ║   NO brokerage connection · NO order placement           ║
 ╚══════════════════════════════════════════════════════════╝
 """
@@ -54,7 +54,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--symbols",
         type=str,
         default=None,
-        help=f"Comma list of instruments. Default: all. Options: {','.join(INSTRUMENTS)}",
+        help=(
+            "Comma list of instruments. Default: active universe "
+            f"({', '.join(active_instruments())}). Full catalog: {', '.join(INSTRUMENTS)}"
+        ),
     )
     p.add_argument(
         "--tf",
@@ -69,7 +72,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--assets",
         type=str,
         default=None,
-        help="Comma list of asset classes: forex,crypto,commodity",
+        help=(
+            "Comma list of asset classes. Default: forex,commodity "
+            "(crypto disabled). Include crypto to re-enable."
+        ),
+    )
+    p.add_argument(
+        "--include-crypto",
+        action="store_true",
+        help="Include cryptocurrency in the active universe for this run.",
     )
     p.add_argument(
         "--min-strength",
@@ -107,7 +118,15 @@ def main(argv: list[str] | None = None) -> int:
     assets = None
     if args.assets:
         assets = [a.strip().lower() for a in args.assets.split(",") if a.strip()]
+    elif args.include_crypto:
+        assets = ["forex", "crypto", "commodity"]
+    elif symbols:
+        # Explicit symbols: do not apply the default class filter
+        assets = None
+    else:
+        assets = default_asset_classes()
 
+    active = active_instruments(assets if assets is not None else default_asset_classes())
     print(BANNER)
     mode_label = (
         "DEMO (cached/synthetic historical)"
@@ -116,10 +135,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     print(f"Mode:        {mode_label}")
     print(
-        f"Instruments: {', '.join(symbols) if symbols else 'ALL (' + str(len(INSTRUMENTS)) + ')'}"
+        f"Instruments: {', '.join(symbols) if symbols else 'ACTIVE (' + str(len(active)) + ')'}"
     )
     print(f"Timeframes:  {', '.join(timeframes)}")
-    print(f"Assets:      {', '.join(assets) if assets else 'forex, crypto, commodity'}")
+    print(
+        f"Assets:      {', '.join(assets) if assets else 'from symbols'}  "
+        "(crypto disabled by default)"
+    )
     print("-" * 60)
 
     opportunities, snapshots, errors = scan_opportunities(

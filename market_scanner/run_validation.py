@@ -26,6 +26,7 @@ from config import (
     VALIDATION_REPORT_JSON,
     VALIDATION_REPORT_TXT,
     VALIDATION_TRAIN_FRACTION,
+    active_instruments,
 )
 from backtest.report_validation import build_validation_report
 from backtest.validation import run_validation
@@ -66,6 +67,10 @@ def main(argv: list[str] | None = None) -> int:
     print("Running chronological train/test validation (analysis only)...")
     print(f"Mode: {'demo' if demo else 'public historical'}")
     print(f"Train fraction: {args.train_frac:.0%}")
+    print(
+        f"Universe: {symbols or 'ACTIVE forex+commodities (' + str(len(active_instruments())) + ')'}"
+    )
+    print("Crypto disabled by default · original scoring rules unchanged")
 
     result = run_validation(
         demo=demo,

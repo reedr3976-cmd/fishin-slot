@@ -191,7 +191,7 @@ class EndToEndDemoValidation(unittest.TestCase):
 
         result = run_validation(
             demo=True,
-            instruments=["EURUSD", "BTCUSD", "XAUUSD"],
+            instruments=["EURUSD", "GBPUSD", "XAUUSD"],
             timeframes=["1d"],
             train_fraction=0.7,
         )

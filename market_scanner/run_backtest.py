@@ -26,6 +26,7 @@ from config import (
     INSTRUMENTS,
     OUTPUT_DIR,
     TIMEFRAMES,
+    active_instruments,
 )
 from backtest.engine import run_backtest_with_metrics
 from backtest.report import build_backtest_report
@@ -72,7 +73,10 @@ def main(argv: list[str] | None = None) -> int:
 
     print("Running historical backtest (analysis only, no brokerage)...")
     print(f"Mode: {'demo' if demo else 'public historical Yahoo data'}")
-    print(f"Symbols: {symbols or 'ALL'}")
+    print(
+        f"Symbols: {symbols or 'ACTIVE forex+commodities (' + str(len(active_instruments())) + ')'}"
+    )
+    print("Note: crypto excluded by default (original scoring rules unchanged)")
     print(f"Timeframes: {timeframes}")
 
     run, metrics = run_backtest_with_metrics(symbols, timeframes, demo=demo)

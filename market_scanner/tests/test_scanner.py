@@ -128,6 +128,21 @@ class DemoScanTests(unittest.TestCase):
         alerts = analyze_series(series, "Bitcoin")
         self.assertIsInstance(alerts, list)
 
+    def test_default_universe_excludes_crypto(self):
+        from config import active_instruments
+
+        active = active_instruments()
+        self.assertTrue(all(v["asset_class"] != "crypto" for v in active.values()))
+        self.assertIn("EURUSD", active)
+        self.assertIn("XAUUSD", active)
+        self.assertNotIn("BTCUSD", active)
+
+        opps, snapshots, errors = scan_opportunities(None, ["1d"], demo=True)
+        self.assertEqual(errors, [])
+        self.assertTrue(snapshots)
+        self.assertTrue(all(s["asset_class"] != "crypto" for s in snapshots))
+        self.assertTrue(all(o.asset_class != "crypto" for o in opps))
+
     def test_full_demo_scan_all_classes(self):
         opps, snapshots, errors = scan_opportunities(
             ["EURUSD", "BTCUSD", "XAUUSD"],

@@ -3,10 +3,15 @@
 Beginner-friendly **ranked daily report** for:
 
 - **Forex:** EURUSD, GBPUSD, USDJPY, AUDUSD, USDCAD, USDCHF  
-- **Crypto:** BTCUSD, ETHUSD, SOLUSD  
-- **Commodities:** Gold (XAUUSD), Silver (XAGUSD), Oil (USOIL)
+- **Commodities:** Gold (XAUUSD), Silver (XAGUSD), Oil (USOIL)  
+- **Crypto:** BTC/ETH/SOL code is kept but **disabled by default**
 
 **Alerts & analysis only** — no brokerage connection, no order placement, no API keys, no passwords.
+
+## Active universe
+
+Default scans = **forex + commodities only**.  
+Re-enable crypto for a single run with `--include-crypto` or `--assets forex,crypto,commodity`.
 
 ## What you get each run
 

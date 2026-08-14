@@ -61,6 +61,7 @@ def build_validation_report(result: dict[str, Any]) -> str:
         "╔══════════════════════════════════════════════════════════╗",
         "║   CONFIDENCE VALIDATION REPORT  ·  Beginner Friendly     ║",
         "║   Chronological train/test  ·  No look-ahead leakage     ║",
+        "║   Active universe: Forex + commodities (crypto off)      ║",
         "║   Analysis only  ·  NO brokerage  ·  NO live trades      ║",
         "╚══════════════════════════════════════════════════════════╝",
         "",
