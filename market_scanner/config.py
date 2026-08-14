@@ -86,6 +86,12 @@ MIN_FEATURE_HITS_FOR_EDGE = 30
 VALIDATION_REPORT_TXT = "output/validation_report.txt"
 VALIDATION_REPORT_JSON = "output/validation_report.json"
 
+# Multi-timeframe confirmation (1d ↔ 1wk). Does not change score thresholds.
+# Live scanner keeps this OFF until explicitly approved.
+MTF_FILTER_DEFAULT_ENABLED = False
+MTF_REPORT_TXT = "output/mtf_filter_report.txt"
+MTF_REPORT_JSON = "output/mtf_filter_report.json"
+
 # Default timeframes for the beginner daily report
 DAILY_TIMEFRAMES = ["1d"]
 

@@ -18,8 +18,16 @@ ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from config import DAILY_TIMEFRAMES, INSTRUMENTS, TIMEFRAMES, active_instruments, default_asset_classes
+from config import (
+    DAILY_TIMEFRAMES,
+    INSTRUMENTS,
+    MTF_FILTER_DEFAULT_ENABLED,
+    TIMEFRAMES,
+    active_instruments,
+    default_asset_classes,
+)
 from scanner import scan_opportunities, write_outputs
+from scanner.mtf_filter import apply_mtf_filter
 from scanner.report import build_daily_summary
 from scanner.setups import SetupAlert
 
@@ -88,6 +96,15 @@ def build_parser() -> argparse.ArgumentParser:
         default="low",
         help="Only include actionable opportunities at/above this confidence.",
     )
+    p.add_argument(
+        "--mtf-filter",
+        action="store_true",
+        default=MTF_FILTER_DEFAULT_ENABLED,
+        help=(
+            "Experimental: require 1d and 1wk direction agreement for MEDIUM/HIGH. "
+            "OFF by default — does not change live behavior until approved."
+        ),
+    )
     return p
 
 
@@ -109,6 +126,10 @@ def main(argv: list[str] | None = None) -> int:
         if args.tf
         else list(DAILY_TIMEFRAMES)
     )
+    if args.mtf_filter:
+        for tf in ("1d", "1wk"):
+            if tf not in timeframes:
+                timeframes.append(tf)
     bad_tf = [t for t in timeframes if t not in TIMEFRAMES]
     if bad_tf:
         print(f"Unknown timeframes: {', '.join(bad_tf)}")
@@ -142,11 +163,22 @@ def main(argv: list[str] | None = None) -> int:
         f"Assets:      {', '.join(assets) if assets else 'from symbols'}  "
         "(crypto disabled by default)"
     )
+    print(
+        f"MTF filter:  {'ON (experimental)' if args.mtf_filter else 'OFF (default — live unchanged)'}"
+    )
     print("-" * 60)
 
     opportunities, snapshots, errors = scan_opportunities(
         symbols, timeframes, demo=demo, asset_classes=assets
     )
+    if args.mtf_filter:
+        opportunities, mtf_stats = apply_mtf_filter(opportunities, enabled=True)
+        print(
+            "MTF stats: "
+            f"MH={mtf_stats['medium_high_total']} kept={mtf_stats['kept_agree']} "
+            f"disagree={mtf_stats['suppressed_disagree']} "
+            f"missing={mtf_stats['suppressed_missing']}"
+        )
 
     min_rank = STRENGTH_RANK[args.min_strength]
     alerts: list[SetupAlert] = []

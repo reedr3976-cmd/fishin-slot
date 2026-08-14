@@ -30,6 +30,8 @@ class TradeResult:
     win: bool
     feature_flags: dict[str, int] | None = None
     rules_name: str = "original"
+    mtf_status: str = "n/a"  # n/a | agreed | suppressed_disagree | suppressed_missing
+
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
