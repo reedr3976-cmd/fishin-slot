@@ -90,6 +90,9 @@ def fetch_yahoo_ohlcv(
     instrument_key: str,
     timeframe: str,
     session: Optional[requests.Session] = None,
+    *,
+    range_override: Optional[str] = None,
+    interval_override: Optional[str] = None,
 ) -> CandleSeries:
     if instrument_key not in INSTRUMENTS:
         raise DataFetchError(f"Unknown instrument: {instrument_key}")
@@ -98,8 +101,8 @@ def fetch_yahoo_ohlcv(
 
     meta = INSTRUMENTS[instrument_key]
     tf = TIMEFRAMES[timeframe]
-    y_interval = tf["interval"]
-    y_range = tf["range"]
+    y_interval = interval_override or tf["interval"]
+    y_range = range_override or tf["range"]
     symbol = meta["symbol"]
 
     sess = session or requests.Session()
@@ -158,12 +161,27 @@ def fetch_instrument(
     demo: bool = False,
     session: Optional[requests.Session] = None,
     cache_dir: Optional[Path] = None,
+    for_backtest: bool = False,
 ) -> CandleSeries:
     """Fetch live public data, or load/generate demo historical series."""
     if demo:
-        return load_or_build_demo(instrument_key, timeframe, cache_dir)
+        # Longer synthetic history for offline backtests
+        n = 400 if for_backtest else 200
+        return load_or_build_demo(instrument_key, timeframe, cache_dir, n_bars=n)
 
-    series = fetch_yahoo_ohlcv(instrument_key, timeframe, session=session)
+    if for_backtest:
+        from config import BACKTEST_TIMEFRAMES
+
+        bt = BACKTEST_TIMEFRAMES.get(timeframe, {})
+        series = fetch_yahoo_ohlcv(
+            instrument_key,
+            timeframe,
+            session=session,
+            range_override=bt.get("range"),
+            interval_override=bt.get("interval"),
+        )
+    else:
+        series = fetch_yahoo_ohlcv(instrument_key, timeframe, session=session)
     if cache_dir:
         cache_dir.mkdir(parents=True, exist_ok=True)
         path = cache_dir / f"{instrument_key}_{timeframe}.json"
@@ -258,12 +276,15 @@ def load_or_build_demo(
     instrument_key: str,
     timeframe: str,
     cache_dir: Optional[Path] = None,
+    n_bars: int = 200,
 ) -> CandleSeries:
     cache_dir = cache_dir or Path(__file__).resolve().parent.parent / "demo_data"
     path = cache_dir / f"{instrument_key}_{timeframe}.json"
     if path.exists():
-        return load_series_json(path)
-    series = _synthetic_series(instrument_key, timeframe)
+        series = load_series_json(path)
+        if len(series) >= n_bars:
+            return series
+    series = _synthetic_series(instrument_key, timeframe, n=n_bars)
     cache_dir.mkdir(parents=True, exist_ok=True)
     save_series_json(series, path)
     return series

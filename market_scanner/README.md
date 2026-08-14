@@ -3,10 +3,15 @@
 Beginner-friendly **ranked daily report** for:
 
 - **Forex:** EURUSD, GBPUSD, USDJPY, AUDUSD, USDCAD, USDCHF  
-- **Crypto:** BTCUSD, ETHUSD, SOLUSD  
-- **Commodities:** Gold (XAUUSD), Silver (XAGUSD), Oil (USOIL)
+- **Commodities:** Gold (XAUUSD), Silver (XAGUSD), Oil (USOIL)  
+- **Crypto:** BTC/ETH/SOL code is kept but **disabled by default**
 
 **Alerts & analysis only** — no brokerage connection, no order placement, no API keys, no passwords.
+
+## Active universe
+
+Default scans = **forex + commodities only**.  
+Re-enable crypto for a single run with `--include-crypto` or `--assets forex,crypto,commodity`.
 
 ## What you get each run
 
@@ -55,6 +60,35 @@ Outputs:
 | Extra packages here | **No** (`numpy` + `requests` already present) |
 
 On your own PC, if needed: `pip install -r requirements.txt`
+
+## Confidence validation (out-of-sample)
+
+```bash
+cd market_scanner
+python3 run_validation.py --live --tf 1d,1wk
+```
+
+- Chronological 70/30 train/test split (no shuffle, no look-ahead in features)
+- Explains why HIGH is rare under original rules
+- Measures feature predictive lift on TRAIN only
+- Proposes a frozen revised candidate, then compares ORIGINAL vs REVISED on unseen TEST
+- Live scanner keeps ORIGINAL rules unless you explicitly approve a change
+- Writes `output/validation_report.txt`
+
+## Historical backtest (confidence ratings)
+
+Before trusting HIGH / MEDIUM / LOW labels, run an unbiased historical check:
+
+```bash
+cd market_scanner
+python3 run_backtest.py --live --tf 1d,1wk
+python3 run_backtest.py --demo   # offline synthetic
+```
+
+- Uses the **same** `evaluate_opportunity()` rules as the live scanner (not tuned for prettier results)
+- No look-ahead: each signal uses only bars available at that time
+- Reports win rate, average return, winners/losers, profit factor, max drawdown by confidence, asset class, and timeframe
+- Writes `output/backtest_report.txt` and `output/backtest_report.json`
 
 ## Tests
 

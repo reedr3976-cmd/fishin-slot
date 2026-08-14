@@ -15,6 +15,8 @@ from config import (
     DEFAULT_TIMEFRAMES,
     INSTRUMENTS,
     OUTPUT_DIR,
+    active_instruments,
+    default_asset_classes,
 )
 from models import CandleSeries
 from providers.yahoo import DataFetchError, fetch_instrument
@@ -73,10 +75,20 @@ def scan_opportunities(
     demo: bool = False,
     asset_classes: Optional[Iterable[str]] = None,
 ) -> tuple[list[Opportunity], list[dict], list[str]]:
-    """Scan markets and return ranked opportunity cards + snapshots + errors."""
-    keys = list(instruments) if instruments else list(INSTRUMENTS.keys())
+    """Scan markets and return ranked opportunity cards + snapshots + errors.
+
+    Default universe = ENABLED_ASSET_CLASSES (forex + commodities; crypto off).
+    Explicit instrument lists are honored even if they include crypto.
+    """
+    if instruments is None:
+        classes = list(asset_classes) if asset_classes is not None else default_asset_classes()
+        keys = list(active_instruments(classes).keys())
+        class_set = set(classes)
+    else:
+        keys = list(instruments)
+        class_set = set(asset_classes) if asset_classes is not None else None
+
     tfs = list(timeframes) if timeframes else list(DEFAULT_TIMEFRAMES)
-    classes = set(asset_classes) if asset_classes else None
 
     opportunities: list[Opportunity] = []
     snapshots: list[dict] = []
@@ -90,7 +102,7 @@ def scan_opportunities(
         if not meta:
             errors.append(f"Unknown instrument: {key}")
             continue
-        if classes and meta["asset_class"] not in classes:
+        if class_set is not None and meta["asset_class"] not in class_set:
             continue
         for tf in tfs:
             try:
