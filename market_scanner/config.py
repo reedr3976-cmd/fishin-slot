@@ -51,10 +51,21 @@ ATR_PERIOD = 14
 REQUEST_DELAY_SEC = 0.35
 
 # Daily scanner ranking thresholds (0–100 confidence score)
+# Kept in sync with scanner.scoring.ORIGINAL_RULES for the live scanner.
 # Below SCORE_LOW => "NO STRONG SETUP" (do not force a trade idea)
 SCORE_HIGH = 60
 SCORE_MEDIUM = 40
 SCORE_LOW = 25
+
+# Out-of-sample validation defaults (chronological split — no shuffle)
+VALIDATION_TRAIN_FRACTION = 0.70  # first 70% of each series by time = train
+# Pre-specified share of TRAIN actionable scores labeled HIGH / MEDIUM
+# (not optimized for return — reduces overfitting vs maximizing train PnL)
+REVISED_HIGH_QUANTILE = 0.85   # top 15% of train actionable scores → HIGH cutoff
+REVISED_MEDIUM_QUANTILE = 0.50  # above median → MEDIUM cutoff (else LOW if ≥ score_low)
+MIN_FEATURE_HITS_FOR_EDGE = 30
+VALIDATION_REPORT_TXT = "output/validation_report.txt"
+VALIDATION_REPORT_JSON = "output/validation_report.json"
 
 # Default timeframes for the beginner daily report
 DAILY_TIMEFRAMES = ["1d"]

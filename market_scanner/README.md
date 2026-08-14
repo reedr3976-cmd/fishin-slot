@@ -56,6 +56,20 @@ Outputs:
 
 On your own PC, if needed: `pip install -r requirements.txt`
 
+## Confidence validation (out-of-sample)
+
+```bash
+cd market_scanner
+python3 run_validation.py --live --tf 1d,1wk
+```
+
+- Chronological 70/30 train/test split (no shuffle, no look-ahead in features)
+- Explains why HIGH is rare under original rules
+- Measures feature predictive lift on TRAIN only
+- Proposes a frozen revised candidate, then compares ORIGINAL vs REVISED on unseen TEST
+- Live scanner keeps ORIGINAL rules unless you explicitly approve a change
+- Writes `output/validation_report.txt`
+
 ## Historical backtest (confidence ratings)
 
 Before trusting HIGH / MEDIUM / LOW labels, run an unbiased historical check:

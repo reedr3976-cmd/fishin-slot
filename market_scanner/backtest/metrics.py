@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from typing import Any, Iterable, Optional
 
 import numpy as np
@@ -28,6 +28,8 @@ class TradeResult:
     cost: float
     net_return: float
     win: bool
+    feature_flags: dict[str, int] | None = None
+    rules_name: str = "original"
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -41,11 +43,13 @@ class MetricBag:
     losses: int = 0
     win_rate: Optional[float] = None
     avg_return: Optional[float] = None
+    median_return: Optional[float] = None
     avg_winner: Optional[float] = None
     avg_loser: Optional[float] = None
     profit_factor: Optional[float] = None
     max_drawdown: Optional[float] = None
     total_net_return: float = 0.0
+    cumulative_return: Optional[float] = None
     reliable: bool = False
     note: str = ""
 
@@ -68,6 +72,13 @@ def _max_drawdown(returns: list[float]) -> float:
     return float(max_dd)
 
 
+def _cumulative_return(returns: list[float]) -> float:
+    equity = 1.0
+    for r in returns:
+        equity *= 1.0 + r
+    return float(equity - 1.0)
+
+
 def summarize_trades(label: str, trades: Iterable[TradeResult]) -> MetricBag:
     trades_list = list(trades)
     bag = MetricBag(label=label, signals=len(trades_list))
@@ -83,6 +94,7 @@ def summarize_trades(label: str, trades: Iterable[TradeResult]) -> MetricBag:
     bag.losses = len(losses)
     bag.win_rate = len(wins) / len(trades_list)
     bag.avg_return = float(np.mean(nets))
+    bag.median_return = float(np.median(nets))
     bag.avg_winner = float(np.mean(wins)) if wins else None
     bag.avg_loser = float(np.mean(losses)) if losses else None
     gross_win = float(np.sum(wins)) if wins else 0.0
@@ -95,6 +107,7 @@ def summarize_trades(label: str, trades: Iterable[TradeResult]) -> MetricBag:
         bag.profit_factor = 0.0
     bag.max_drawdown = _max_drawdown(nets)
     bag.total_net_return = float(np.sum(nets))
+    bag.cumulative_return = _cumulative_return(nets)
     bag.reliable = len(trades_list) >= MIN_SIGNALS_FOR_CONCLUSION
     if not bag.reliable:
         bag.note = (
@@ -117,7 +130,6 @@ def group_metrics(trades: list[TradeResult]) -> dict[str, Any]:
         cls: summarize_trades(cls, [t for t in trades if t.asset_class == cls])
         for cls in classes
     }
-    # Also confidence × class
     by_class_conf: dict[str, dict[str, MetricBag]] = {}
     for cls in classes:
         by_class_conf[cls] = {

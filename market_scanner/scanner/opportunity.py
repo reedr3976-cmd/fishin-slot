@@ -2,6 +2,8 @@
 
 Each instrument/timeframe produces ONE ranked result with a confidence score.
 Weak/conflicting conditions become "NO STRONG SETUP" instead of forced signals.
+
+Scoring weights/thresholds come from ScoringRules (default = original merged rules).
 """
 
 from __future__ import annotations
@@ -12,18 +14,11 @@ from typing import Any, Optional
 
 import numpy as np
 
-from config import (
-    RSI_OVERBOUGHT,
-    RSI_OVERSOLD,
-    SCORE_HIGH,
-    SCORE_LOW,
-    SCORE_MEDIUM,
-    SMA_FAST,
-    SMA_SLOW,
-)
+from config import RSI_OVERBOUGHT, RSI_OVERSOLD, SMA_FAST, SMA_SLOW
 from indicators import compute_all
 from models import CandleSeries
 from scanner.levels import format_level, nearest_levels
+from scanner.scoring import ORIGINAL_RULES, ScoringRules
 from scanner.setups import _crossed_down, _crossed_up, _prev, last_value
 
 
@@ -51,6 +46,8 @@ class Opportunity:
     support_2: Optional[float]
     resistance_2: Optional[float]
     factors: list[str] = field(default_factory=list)
+    feature_flags: dict[str, int] = field(default_factory=dict)
+    rules_name: str = "original"
     scanned_at: str = ""
 
     def to_dict(self) -> dict[str, Any]:
@@ -83,23 +80,54 @@ def _macd_condition(
     macd_sig: Optional[float],
     macd_prev: Optional[float],
     macd_sig_prev: Optional[float],
-) -> tuple[str, Optional[str], int]:
-    """Return (plain-English condition, optional side, score points)."""
+    rules: ScoringRules,
+) -> tuple[str, Optional[str], int, str]:
+    """Return (text, side, points, feature_key)."""
     if None in (macd_now, macd_sig):
-        return "MACD not ready yet", None, 0
+        return "MACD not ready yet", None, 0, ""
     if _crossed_up(macd_prev, macd_now, macd_sig_prev, macd_sig):
-        return "MACD just crossed above its signal line (bullish momentum shift)", "bullish", 25
+        return (
+            "MACD just crossed above its signal line (bullish momentum shift)",
+            "bullish",
+            rules.macd_cross,
+            "macd_cross",
+        )
     if _crossed_down(macd_prev, macd_now, macd_sig_prev, macd_sig):
-        return "MACD just crossed below its signal line (bearish momentum shift)", "bearish", 25
+        return (
+            "MACD just crossed below its signal line (bearish momentum shift)",
+            "bearish",
+            rules.macd_cross,
+            "macd_cross",
+        )
     if macd_now > macd_sig and macd_now > 0:
-        return "MACD is above signal and above zero (bullish momentum)", "bullish", 8
+        return (
+            "MACD is above signal and above zero (bullish momentum)",
+            "bullish",
+            rules.macd_strong,
+            "macd_strong",
+        )
     if macd_now < macd_sig and macd_now < 0:
-        return "MACD is below signal and below zero (bearish momentum)", "bearish", 8
+        return (
+            "MACD is below signal and below zero (bearish momentum)",
+            "bearish",
+            rules.macd_strong,
+            "macd_strong",
+        )
     if macd_now > macd_sig:
-        return "MACD is above its signal line (mild bullish bias)", "bullish", 5
+        return (
+            "MACD is above its signal line (mild bullish bias)",
+            "bullish",
+            rules.macd_mild,
+            "macd_mild",
+        )
     if macd_now < macd_sig:
-        return "MACD is below its signal line (mild bearish bias)", "bearish", 5
-    return "MACD is flat / mixed", None, 0
+        return (
+            "MACD is below its signal line (mild bearish bias)",
+            "bearish",
+            rules.macd_mild,
+            "macd_mild",
+        )
+    return "MACD is flat / mixed", None, 0, ""
 
 
 def _volatility_note(atr: Optional[float], price: float) -> tuple[Optional[float], str]:
@@ -115,18 +143,13 @@ def _volatility_note(atr: Optional[float], price: float) -> tuple[Optional[float
     return round(pct, 3), note
 
 
-def _confidence_label(score: int) -> str:
-    if score >= SCORE_HIGH:
-        return "HIGH"
-    if score >= SCORE_MEDIUM:
-        return "MEDIUM"
-    if score >= SCORE_LOW:
-        return "LOW"
-    return "NO STRONG SETUP"
-
-
-def evaluate_opportunity(series: CandleSeries, display_name: str) -> Opportunity:
+def evaluate_opportunity(
+    series: CandleSeries,
+    display_name: str,
+    rules: ScoringRules | None = None,
+) -> Opportunity:
     """Build one ranked opportunity card for an instrument/timeframe."""
+    rules = rules or ORIGINAL_RULES
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     price = float(series.last_close)
 
@@ -154,6 +177,8 @@ def evaluate_opportunity(series: CandleSeries, display_name: str) -> Opportunity
             support_2=None,
             resistance_2=None,
             factors=[],
+            feature_flags={},
+            rules_name=rules.name,
             scanned_at=now,
         )
 
@@ -176,100 +201,145 @@ def evaluate_opportunity(series: CandleSeries, display_name: str) -> Opportunity
     bear_score = 0
     bull_factors: list[str] = []
     bear_factors: list[str] = []
+    flags: dict[str, int] = {
+        "sma_cross": 0,
+        "sma_stack": 0,
+        "rsi_extreme": 0,
+        "rsi_exit": 0,
+        "rsi_mild": 0,
+        "macd_cross": 0,
+        "macd_strong": 0,
+        "macd_mild": 0,
+        "bb_touch": 0,
+        "near_support": 0,
+        "near_resistance": 0,
+        "high_atr": 0,
+    }
 
     # SMA structure / crosses
     if _crossed_up(sma20_prev, sma20, sma50_prev, sma50):
-        bull_score += 35
+        bull_score += rules.sma_cross
         bull_factors.append("Golden cross: SMA20 just moved above SMA50")
+        flags["sma_cross"] = 1
     elif _crossed_down(sma20_prev, sma20, sma50_prev, sma50):
-        bear_score += 35
+        bear_score += rules.sma_cross
         bear_factors.append("Death cross: SMA20 just moved below SMA50")
+        flags["sma_cross"] = 1
     elif sma20 is not None and sma50 is not None:
         if sma20 > sma50 and price > sma20:
-            bull_score += 12
+            bull_score += rules.sma_stack
             bull_factors.append("Price and moving averages are stacked bullish")
+            flags["sma_stack"] = 1
         elif sma20 < sma50 and price < sma20:
-            bear_score += 12
+            bear_score += rules.sma_stack
             bear_factors.append("Price and moving averages are stacked bearish")
+            flags["sma_stack"] = 1
 
     # RSI
     if rsi_now is not None:
         if rsi_now <= RSI_OVERSOLD:
-            pts = 28 if rsi_now <= 20 else 20
+            pts = rules.rsi_extreme_strong if rsi_now <= 20 else rules.rsi_extreme
             bull_score += pts
             bull_factors.append(f"RSI is oversold at {rsi_now:.1f} (bounce watch)")
+            flags["rsi_extreme"] = 1
         elif rsi_now >= RSI_OVERBOUGHT:
-            pts = 28 if rsi_now >= 80 else 20
+            pts = rules.rsi_extreme_strong if rsi_now >= 80 else rules.rsi_extreme
             bear_score += pts
             bear_factors.append(f"RSI is overbought at {rsi_now:.1f} (pullback watch)")
+            flags["rsi_extreme"] = 1
         elif rsi_prev is not None and rsi_prev <= RSI_OVERSOLD < rsi_now:
-            bull_score += 18
+            bull_score += rules.rsi_exit
             bull_factors.append(f"RSI left oversold ({rsi_prev:.1f} → {rsi_now:.1f})")
+            flags["rsi_exit"] = 1
         elif rsi_prev is not None and rsi_prev >= RSI_OVERBOUGHT > rsi_now:
-            bear_score += 18
+            bear_score += rules.rsi_exit
             bear_factors.append(f"RSI left overbought ({rsi_prev:.1f} → {rsi_now:.1f})")
+            flags["rsi_exit"] = 1
         elif rsi_now >= 55:
-            bull_score += 4
+            bull_score += rules.rsi_mild
             bull_factors.append(f"RSI is mildly strong at {rsi_now:.1f}")
+            flags["rsi_mild"] = 1
         elif rsi_now <= 45:
-            bear_score += 4
+            bear_score += rules.rsi_mild
             bear_factors.append(f"RSI is mildly weak at {rsi_now:.1f}")
+            flags["rsi_mild"] = 1
 
     # MACD
-    macd_text, macd_side, macd_pts = _macd_condition(
-        macd_now, macd_sig, macd_prev, macd_sig_prev
+    macd_text, macd_side, macd_pts, macd_key = _macd_condition(
+        macd_now, macd_sig, macd_prev, macd_sig_prev, rules
     )
     if macd_side == "bullish":
         bull_score += macd_pts
         bull_factors.append(macd_text)
+        if macd_key:
+            flags[macd_key] = 1
     elif macd_side == "bearish":
         bear_score += macd_pts
         bear_factors.append(macd_text)
+        if macd_key:
+            flags[macd_key] = 1
 
     # Bollinger
     if bb_l is not None and price <= bb_l:
-        bull_score += 15
+        bull_score += rules.bb_touch
         bull_factors.append("Price is at/below the lower Bollinger Band")
+        flags["bb_touch"] = 1
     elif bb_u is not None and price >= bb_u:
-        bear_score += 15
+        bear_score += rules.bb_touch
         bear_factors.append("Price is at/above the upper Bollinger Band")
+        flags["bb_touch"] = 1
+
+    levels = nearest_levels(
+        series.close, series.high, series.low, sma20=sma20, sma50=sma50
+    )
+    # Support/resistance proximity flags (informational / feature study; not scored in original)
+    if levels["support"] is not None and price > 0:
+        if (price - levels["support"]) / price <= 0.005:
+            flags["near_support"] = 1
+    if levels["resistance"] is not None and price > 0:
+        if (levels["resistance"] - price) / price <= 0.005:
+            flags["near_resistance"] = 1
+
+    atr_pct, vol_note = _volatility_note(atr_now, price)
+    if atr_pct is not None and atr_pct >= 2.0:
+        flags["high_atr"] = 1
 
     # Decide direction from net confluence
     net = bull_score - bear_score
-    if bull_score >= bear_score and bull_score > 0 and net >= 8:
+    if bull_score >= bear_score and bull_score > 0 and net >= rules.min_net_for_direction:
         direction = "bullish"
         raw_score = bull_score
         factors = bull_factors
-        # Penalize if opposing evidence is strong
-        if bear_score >= 15:
-            raw_score = max(0, raw_score - min(bear_score, 20))
+        if bear_score >= rules.opposing_penalty_trigger:
+            raw_score = max(0, raw_score - min(bear_score, rules.opposing_penalty_cap))
             factors = factors + [f"Note: some opposing pressure ({bear_score} bear points)"]
-    elif bear_score > bull_score and bear_score > 0 and -net >= 8:
+    elif bear_score > bull_score and bear_score > 0 and -net >= rules.min_net_for_direction:
         direction = "bearish"
         raw_score = bear_score
         factors = bear_factors
-        if bull_score >= 15:
-            raw_score = max(0, raw_score - min(bull_score, 20))
+        if bull_score >= rules.opposing_penalty_trigger:
+            raw_score = max(0, raw_score - min(bull_score, rules.opposing_penalty_cap))
             factors = factors + [f"Note: some opposing pressure ({bull_score} bull points)"]
     else:
         direction = "neutral"
         raw_score = max(bull_score, bear_score)
         factors = bull_factors + bear_factors
-        # Mixed / unclear — force below actionable unless extremely one-sided (handled above)
-        raw_score = min(raw_score, SCORE_LOW - 1)
+        raw_score = min(raw_score, rules.score_low - 1)
 
-    # Confluence bonus when multiple independent factors agree
-    if direction in ("bullish", "bearish") and len([f for f in factors if not f.startswith("Note:")]) >= 3:
-        raw_score += 10
+    core_factors = [f for f in factors if not f.startswith("Note:")]
+    if (
+        direction in ("bullish", "bearish")
+        and len(core_factors) >= rules.confluence_min_factors
+    ):
+        raw_score += rules.confluence_bonus
         factors.append("Several indicators agree (confluence bonus)")
 
     score = int(max(0, min(100, raw_score)))
-    confidence = _confidence_label(score)
+    factor_count = len([f for f in factors if not f.startswith("Note:")])
+    confidence = rules.confidence_label(score, factor_count=factor_count)
 
-    # Neutral or weak => NO STRONG SETUP wording
     if direction == "neutral" or confidence == "NO STRONG SETUP":
         confidence = "NO STRONG SETUP"
-        direction = "neutral" if direction == "neutral" else direction
         if not factors:
             reason = (
                 "No clear bullish or bearish setup right now. "
@@ -280,19 +350,13 @@ def evaluate_opportunity(series: CandleSeries, display_name: str) -> Opportunity
                 "NO STRONG SETUP: conditions are not clear enough for a ranked opportunity. "
                 + " | ".join(factors[:3])
             )
-        # Keep direction neutral for non-actionable cards
-        if score < SCORE_LOW:
+        if score < rules.score_low:
             direction = "neutral"
     else:
         lead = factors[0] if factors else "Technical conditions lined up"
         reason = f"{lead}."
         if len(factors) > 1:
             reason += " Also: " + "; ".join(factors[1:3]) + "."
-
-    atr_pct, vol_note = _volatility_note(atr_now, price)
-    levels = nearest_levels(
-        series.close, series.high, series.low, sma20=sma20, sma50=sma50
-    )
 
     return Opportunity(
         instrument=series.instrument,
@@ -317,6 +381,8 @@ def evaluate_opportunity(series: CandleSeries, display_name: str) -> Opportunity
         support_2=levels["support_2"],
         resistance_2=levels["resistance_2"],
         factors=factors,
+        feature_flags=flags,
+        rules_name=rules.name,
         scanned_at=now,
     )
 
