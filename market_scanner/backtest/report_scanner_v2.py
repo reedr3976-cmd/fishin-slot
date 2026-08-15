@@ -184,21 +184,31 @@ def build_study_payload(
     train_frac: float = V2_TRAIN_FRACTION,
     n_folds: int = V2_N_FOLDS,
 ) -> dict[str, Any]:
+    from backtest.scanner_v2 import collect_stage_trades
+
     stage_train: dict[str, list[V2Trade]] = {}
     stage_test: dict[str, list[V2Trade]] = {}
     stage_test_2x: dict[str, list[V2Trade]] = {}
-    stage_folds: dict[str, list[dict]] = {}
     summaries: dict[str, Any] = {}
 
     for stage in stages:
-        train = run_stage_on_map(series_map, stage, start_frac=0.0, end_frac=train_frac, cost_mult=1.0)
-        test = run_stage_on_map(series_map, stage, start_frac=train_frac, end_frac=1.0, cost_mult=1.0)
-        test_2x = run_stage_on_map(series_map, stage, start_frac=train_frac, end_frac=1.0, cost_mult=2.0)
-        folds = chronological_folds(series_map, stage, n_folds=n_folds, cost_mult=1.0)
+        print(f"  collecting {stage.name}...", flush=True)
+        cached = collect_stage_trades(series_map, stage, cost_mult=1.0)
+        train = run_stage_on_map(
+            series_map, stage, start_frac=0.0, end_frac=train_frac, cost_mult=1.0, cached=cached
+        )
+        test = run_stage_on_map(
+            series_map, stage, start_frac=train_frac, end_frac=1.0, cost_mult=1.0, cached=cached
+        )
+        test_2x = run_stage_on_map(
+            series_map, stage, start_frac=train_frac, end_frac=1.0, cost_mult=2.0, cached=cached
+        )
+        folds = chronological_folds(
+            series_map, stage, n_folds=n_folds, cost_mult=1.0, cached=cached
+        )
         stage_train[stage.name] = train
         stage_test[stage.name] = test
         stage_test_2x[stage.name] = test_2x
-        stage_folds[stage.name] = folds
 
         fold_exps = []
         fold_rows = []
