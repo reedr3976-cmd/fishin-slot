@@ -1,15 +1,6 @@
 """4H trending diagnostics for the ORIGINAL scanner (analysis only).
 
 Focus: forex + commodities + stocks (no crypto). Live defaults unchanged.
-
-Stages:
-  1) Baseline MEDIUM / HIGH on 4H (all actionable + trending-only)
-  2) Winner vs loser characteristics (TRAIN, then describe TEST)
-  3) Per asset class / symbol breakdown
-  4) Separate OOS experiments:
-       - entry quality gates (not MACD/S/R hard filters)
-       - stop-loss ATR multiples
-       - take-profit ATR multiples
 """
 
 from __future__ import annotations
@@ -31,7 +22,8 @@ from backtest.fourh_exits import (
     ENTRY_TP_POLICIES,
     FIXED_HOLD,
     ExitPolicy,
-    backtest_series_exits,
+    collect_entries,
+    realize_entries,
 )
 from backtest.metrics import TradeResult, summarize_trades
 from backtest.validation import FEATURE_KEYS
@@ -43,7 +35,6 @@ def _flag(t: TradeResult, name: str) -> bool:
 
 
 def is_trending(t: TradeResult) -> bool:
-    """Genuine trend stack: price + SMA20/SMA50 aligned."""
     return _flag(t, "sma_stack")
 
 
@@ -51,29 +42,34 @@ def _mh(trades: list[TradeResult]) -> list[TradeResult]:
     return [t for t in trades if t.confidence in ("HIGH", "MEDIUM")]
 
 
-def _run_map(
+def _collect_map(
     series_map,
     *,
     start_frac: float,
     end_frac: float,
-    exit_policy: ExitPolicy = FIXED_HOLD,
     require_trending: bool = False,
-) -> list[TradeResult]:
-    trades: list[TradeResult] = []
-    for (_, _tf), series in series_map.items():
+):
+    """Return { (instrument,tf): (series, entries) }."""
+    out = {}
+    for key, series in series_map.items():
         n = len(series)
         start_idx = int(n * start_frac)
         end_idx = int(n * end_frac)
-        trades.extend(
-            backtest_series_exits(
-                series,
-                ORIGINAL_RULES,
-                exit_policy=exit_policy,
-                start_idx=start_idx,
-                end_idx_exclusive=end_idx,
-                require_trending=require_trending,
-            )
+        entries = collect_entries(
+            series,
+            ORIGINAL_RULES,
+            start_idx=start_idx,
+            end_idx_exclusive=end_idx,
+            require_trending=require_trending,
         )
+        out[key] = (series, entries)
+    return out
+
+
+def _realize_map(collected, exit_policy: ExitPolicy = FIXED_HOLD) -> list[TradeResult]:
+    trades: list[TradeResult] = []
+    for _key, (series, entries) in collected.items():
+        trades.extend(realize_entries(series, entries, exit_policy))
     return trades
 
 
@@ -99,69 +95,6 @@ def _bag(trades: list[TradeResult], label: str) -> dict[str, Any]:
     }
 
 
-def _winner_loser_profile(trades: list[TradeResult]) -> dict[str, Any]:
-    wins = [t for t in trades if t.win]
-    losses = [t for t in trades if not t.win]
-    profile: dict[str, Any] = {
-        "n_wins": len(wins),
-        "n_losses": len(losses),
-        "avg_score_wins": float(np.mean([t.score for t in wins])) if wins else None,
-        "avg_score_losses": float(np.mean([t.score for t in losses])) if losses else None,
-        "avg_atr_pct_wins": None,
-        "avg_atr_pct_losses": None,
-        "features": {},
-    }
-    def atr_pct(t: TradeResult) -> Optional[float]:
-        if t.atr_at_entry is None or t.entry_price <= 0:
-            return None
-        return t.atr_at_entry / t.entry_price
-
-    w_atr = [atr_pct(t) for t in wins]
-    l_atr = [atr_pct(t) for t in losses]
-    w_atr_f = [x for x in w_atr if x is not None]
-    l_atr_f = [x for x in l_atr if x is not None]
-    profile["avg_atr_pct_wins"] = float(np.mean(w_atr_f)) if w_atr_f else None
-    profile["avg_atr_pct_losses"] = float(np.mean(l_atr_f)) if l_atr_f else None
-
-    for feat in FEATURE_KEYS:
-        w_rate = (
-            sum(1 for t in wins if _flag(t, feat)) / len(wins) if wins else None
-        )
-        l_rate = (
-            sum(1 for t in losses if _flag(t, feat)) / len(losses) if losses else None
-        )
-        lift = None if w_rate is None or l_rate is None else w_rate - l_rate
-        profile["features"][feat] = {
-            "win_rate_with_flag": w_rate,
-            "loss_rate_with_flag": l_rate,
-            "delta_win_minus_loss": lift,
-            "hits_total": sum(1 for t in trades if _flag(t, feat)),
-        }
-    return profile
-
-
-def _entry_gate(trade: TradeResult, gate: str) -> bool:
-    """Entry-quality gates that are NOT the rejected MACD / directional S/R filters."""
-    if gate == "none":
-        return True
-    if gate == "trending_only":
-        return is_trending(trade)
-    if gate == "avoid_high_atr":
-        return not _flag(trade, "high_atr")
-    if gate == "trending_avoid_high_atr":
-        return is_trending(trade) and not _flag(trade, "high_atr")
-    if gate == "score_ge_45":
-        return trade.score >= 45
-    if gate == "trending_score_ge_45":
-        return is_trending(trade) and trade.score >= 45
-    raise ValueError(gate)
-
-
-def _apply_entry_gate(trades: list[TradeResult], gate: str) -> list[TradeResult]:
-    # LOW never gated in entry experiments — only MH filtered; keep LOW out of MH bags
-    return [t for t in trades if t.confidence not in ("HIGH", "MEDIUM") or _entry_gate(t, gate)]
-
-
 def _avg_r(trades: list[TradeResult]) -> Optional[float]:
     rs = [t.r_multiple for t in trades if t.r_multiple is not None]
     return float(np.mean(rs)) if rs else None
@@ -177,6 +110,60 @@ def _enrich_bag(trades: list[TradeResult], label: str) -> dict[str, Any]:
     return base
 
 
+def _winner_loser_profile(trades: list[TradeResult]) -> dict[str, Any]:
+    wins = [t for t in trades if t.win]
+    losses = [t for t in trades if not t.win]
+    profile: dict[str, Any] = {
+        "n_wins": len(wins),
+        "n_losses": len(losses),
+        "avg_score_wins": float(np.mean([t.score for t in wins])) if wins else None,
+        "avg_score_losses": float(np.mean([t.score for t in losses])) if losses else None,
+        "avg_atr_pct_wins": None,
+        "avg_atr_pct_losses": None,
+        "features": {},
+    }
+
+    def atr_pct(t: TradeResult) -> Optional[float]:
+        if t.atr_at_entry is None or t.entry_price <= 0:
+            return None
+        return t.atr_at_entry / t.entry_price
+
+    w_atr_f = [x for x in (atr_pct(t) for t in wins) if x is not None]
+    l_atr_f = [x for x in (atr_pct(t) for t in losses) if x is not None]
+    profile["avg_atr_pct_wins"] = float(np.mean(w_atr_f)) if w_atr_f else None
+    profile["avg_atr_pct_losses"] = float(np.mean(l_atr_f)) if l_atr_f else None
+
+    for feat in FEATURE_KEYS:
+        w_rate = sum(1 for t in wins if _flag(t, feat)) / len(wins) if wins else None
+        l_rate = (
+            sum(1 for t in losses if _flag(t, feat)) / len(losses) if losses else None
+        )
+        lift = None if w_rate is None or l_rate is None else w_rate - l_rate
+        profile["features"][feat] = {
+            "win_rate_with_flag": w_rate,
+            "loss_rate_with_flag": l_rate,
+            "delta_win_minus_loss": lift,
+            "hits_total": sum(1 for t in trades if _flag(t, feat)),
+        }
+    return profile
+
+
+def _entry_gate(trade: TradeResult, gate: str) -> bool:
+    if gate == "none":
+        return True
+    if gate == "trending_only":
+        return is_trending(trade)
+    if gate == "avoid_high_atr":
+        return not _flag(trade, "high_atr")
+    if gate == "trending_avoid_high_atr":
+        return is_trending(trade) and not _flag(trade, "high_atr")
+    if gate == "score_ge_45":
+        return trade.score >= 45
+    if gate == "trending_score_ge_45":
+        return is_trending(trade) and trade.score >= 45
+    raise ValueError(gate)
+
+
 def run_fourh_diagnostics(
     *,
     demo: bool = False,
@@ -188,40 +175,34 @@ def run_fourh_diagnostics(
         if instruments is not None
         else list(study_instruments().keys())
     )
-    # Guard: never include crypto in this study
-    keys = [
-        k
-        for k in keys
-        if study_instruments().get(k, {}).get("asset_class") != "crypto"
-        and k in study_instruments()
-    ]
+    keys = [k for k in keys if k in study_instruments()]
+
+    print("  collecting series...", flush=True)
     series_map, errors, bars = load_series_map(keys, ["4h"], demo=demo)
     mode = "demo" if demo else "public_historical"
 
-    # --- Baseline fixed-hold (all MH + trending MH) ---
-    train_all = _run_map(
+    print("  scoring TRAIN/TEST entries (once)...", flush=True)
+    train_all_c = _collect_map(
         series_map, start_frac=0.0, end_frac=train_fraction, require_trending=False
     )
-    test_all = _run_map(
+    test_all_c = _collect_map(
         series_map, start_frac=train_fraction, end_frac=1.0, require_trending=False
     )
-    train_trend = _run_map(
+    train_tr_c = _collect_map(
         series_map, start_frac=0.0, end_frac=train_fraction, require_trending=True
     )
-    test_trend = _run_map(
+    test_tr_c = _collect_map(
         series_map, start_frac=train_fraction, end_frac=1.0, require_trending=True
     )
 
-    train_mh = _mh(train_all)
-    test_mh = _mh(test_all)
-    train_tmh = _mh(train_trend)
-    test_tmh = _mh(test_trend)
+    print("  realizing fixed-hold baselines...", flush=True)
+    train_mh = _mh(_realize_map(train_all_c, FIXED_HOLD))
+    test_mh = _mh(_realize_map(test_all_c, FIXED_HOLD))
+    train_tmh = _mh(_realize_map(train_tr_c, FIXED_HOLD))
+    test_tmh = _mh(_realize_map(test_tr_c, FIXED_HOLD))
 
-    # Winner/loser on TRAIN trending MH (propose from train only)
     wl_train = _winner_loser_profile(train_tmh)
     wl_test = _winner_loser_profile(test_tmh)
-
-    # Rank features by |delta| on train with enough hits
     ranked = sorted(
         (
             (f, info)
@@ -233,7 +214,6 @@ def run_fourh_diagnostics(
         reverse=True,
     )
 
-    # --- Entry quality OOS (on fixed-hold all signals, then filter MH) ---
     entry_gates = [
         "none",
         "trending_only",
@@ -245,38 +225,21 @@ def run_fourh_diagnostics(
     entry_oos: dict[str, Any] = {}
     for gate in entry_gates:
         kept = [t for t in test_mh if _entry_gate(t, gate)]
-        # For trending_* gates, also report from trending path consistency
         entry_oos[gate] = {
             "removed_mh": len(test_mh) - len(kept),
             "metrics": _enrich_bag(kept, f"entry/{gate}"),
         }
 
-    # --- Stop-loss OOS (trending entries only; ORIGINAL scoring) ---
+    print("  realizing stop-loss variants on same trending TEST entries...", flush=True)
     stop_oos: dict[str, Any] = {}
     for pol in ENTRY_STOP_POLICIES:
-        trades = _mh(
-            _run_map(
-                series_map,
-                start_frac=train_fraction,
-                end_frac=1.0,
-                exit_policy=pol,
-                require_trending=True,
-            )
-        )
+        trades = _mh(_realize_map(test_tr_c, pol))
         stop_oos[pol.name] = _enrich_bag(trades, f"stop/{pol.name}")
 
-    # --- Take-profit OOS (trending entries only) ---
+    print("  realizing take-profit variants on same trending TEST entries...", flush=True)
     tp_oos: dict[str, Any] = {}
     for pol in ENTRY_TP_POLICIES:
-        trades = _mh(
-            _run_map(
-                series_map,
-                start_frac=train_fraction,
-                end_frac=1.0,
-                exit_policy=pol,
-                require_trending=True,
-            )
-        )
+        trades = _mh(_realize_map(test_tr_c, pol))
         tp_oos[pol.name] = _enrich_bag(trades, f"tp/{pol.name}")
 
     return {
@@ -292,7 +255,8 @@ def run_fourh_diagnostics(
         "note": (
             "Analysis only. Live scanner still forex+commodity defaults and not "
             "forced to 4H. Crypto excluded. MACD/S/R hard filters NOT tested as "
-            "enable candidates (rejected earlier)."
+            "enable candidates (rejected earlier). Exit variants share the same "
+            "trending TEST entry set."
         ),
         "baseline": {
             "train_all_mh": _enrich_bag(train_mh, "train_all_mh"),
