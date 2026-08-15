@@ -109,6 +109,10 @@ FOURH_DIAG_REPORT_JSON = "output/fourh_diagnostics_report.json"
 ASSET_CLASS_VALIDATION_TXT = "output/asset_class_validation_report.txt"
 ASSET_CLASS_VALIDATION_JSON = "output/asset_class_validation_report.json"
 
+# Regime / walk-forward study (analysis only)
+REGIME_STUDY_TXT = "output/regime_walkforward_report.txt"
+REGIME_STUDY_JSON = "output/regime_walkforward_report.json"
+
 # Default timeframes for the beginner daily report
 DAILY_TIMEFRAMES = ["1d"]
 

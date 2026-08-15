@@ -39,6 +39,10 @@ class EntrySignal:
     atr_at_entry: Optional[float]
     feature_flags: dict[str, int]
     rules_name: str
+    atr_pct: Optional[float] = None  # ATR / price (fraction, not percent)
+    trend_sep_atr: Optional[float] = None  # |SMA20-SMA50| / ATR
+    sma20: Optional[float] = None
+    sma50: Optional[float] = None
 
 
 FIXED_HOLD = ExitPolicy(name="fixed_hold", mode="fixed")
@@ -142,6 +146,19 @@ def collect_entries(
             i += 1
             continue
 
+        atr_val = float(opp.atr) if opp.atr is not None else None
+        atr_pct_frac = None
+        if atr_val is not None and float(series.close[i]) > 0:
+            atr_pct_frac = atr_val / float(series.close[i])
+        trend_sep = None
+        if (
+            atr_val is not None
+            and atr_val > 0
+            and opp.sma20 is not None
+            and opp.sma50 is not None
+        ):
+            trend_sep = abs(float(opp.sma20) - float(opp.sma50)) / atr_val
+
         entries.append(
             EntrySignal(
                 instrument=series.instrument,
@@ -153,9 +170,13 @@ def collect_entries(
                 entry_idx=i,
                 entry_ts=int(series.timestamps[i]),
                 entry_price=float(series.close[i]),
-                atr_at_entry=float(opp.atr) if opp.atr is not None else None,
+                atr_at_entry=atr_val,
                 feature_flags=dict(opp.feature_flags),
                 rules_name=rules.name,
+                atr_pct=atr_pct_frac,
+                trend_sep_atr=trend_sep,
+                sma20=float(opp.sma20) if opp.sma20 is not None else None,
+                sma50=float(opp.sma50) if opp.sma50 is not None else None,
             )
         )
         i += horizon
