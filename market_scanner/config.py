@@ -86,6 +86,10 @@ MIN_FEATURE_HITS_FOR_EDGE = 30
 VALIDATION_REPORT_TXT = "output/validation_report.txt"
 VALIDATION_REPORT_JSON = "output/validation_report.json"
 
+# Confluence filter study (analysis only — live scanner unchanged)
+CONFLUENCE_REPORT_TXT = "output/confluence_report.txt"
+CONFLUENCE_REPORT_JSON = "output/confluence_report.json"
+
 # Default timeframes for the beginner daily report
 DAILY_TIMEFRAMES = ["1d"]
 
