@@ -86,6 +86,10 @@ MIN_FEATURE_HITS_FOR_EDGE = 30
 VALIDATION_REPORT_TXT = "output/validation_report.txt"
 VALIDATION_REPORT_JSON = "output/validation_report.json"
 
+# ATR / volatility regime study (analysis only — live scanner unchanged)
+ATR_REGIME_REPORT_TXT = "output/atr_regime_report.txt"
+ATR_REGIME_REPORT_JSON = "output/atr_regime_report.json"
+
 # Default timeframes for the beginner daily report
 DAILY_TIMEFRAMES = ["1d"]
 
