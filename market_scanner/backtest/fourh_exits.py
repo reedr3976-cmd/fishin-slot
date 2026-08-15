@@ -43,6 +43,16 @@ class EntrySignal:
     trend_sep_atr: Optional[float] = None  # |SMA20-SMA50| / ATR
     sma20: Optional[float] = None
     sma50: Optional[float] = None
+    # Trend-quality diagnostics (causal; filled by enrichers)
+    adx: Optional[float] = None
+    plus_di: Optional[float] = None
+    minus_di: Optional[float] = None
+    ema_sep_atr: Optional[float] = None
+    ema_slope_atr: Optional[float] = None
+    dist_sma50_atr: Optional[float] = None
+    atr_expand: Optional[float] = None  # atr / median(atr[-50:])
+    structure_dir: int = 0  # +1 HHHL, -1 LHLL, 0 none
+    daily_agree: Optional[bool] = None  # 1d sma_stack agrees with direction
 
 
 FIXED_HOLD = ExitPolicy(name="fixed_hold", mode="fixed")

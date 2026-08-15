@@ -113,6 +113,10 @@ ASSET_CLASS_VALIDATION_JSON = "output/asset_class_validation_report.json"
 REGIME_STUDY_TXT = "output/regime_walkforward_report.txt"
 REGIME_STUDY_JSON = "output/regime_walkforward_report.json"
 
+# Trend-quality filter study (analysis only)
+TREND_QUALITY_TXT = "output/trend_quality_report.txt"
+TREND_QUALITY_JSON = "output/trend_quality_report.json"
+
 # Default timeframes for the beginner daily report
 DAILY_TIMEFRAMES = ["1d"]
 
