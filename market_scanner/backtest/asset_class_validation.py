@@ -188,6 +188,39 @@ def _contrast_symbols(
     return {"strong": profile(strong), "weak": profile(weak)}
 
 
+def _collect_full(series_map):
+    """Score each series once; return {key: (series, mh_trending_entries)}."""
+    collected = {}
+    for key, series in series_map.items():
+        entries = collect_entries(
+            series,
+            ORIGINAL_RULES,
+            start_idx=0,
+            end_idx_exclusive=None,
+            require_trending=False,
+        )
+        entries = [
+            e
+            for e in entries
+            if e.confidence in ("HIGH", "MEDIUM")
+            and int((e.feature_flags or {}).get("sma_stack", 0) or 0) == 1
+        ]
+        collected[key] = (series, entries)
+    return collected
+
+
+def _slice_collected(collected, start_frac: float, end_frac: float):
+    """Filter precomputed entries whose entry_idx falls in [start, end) of series."""
+    out = {}
+    for key, (series, entries) in collected.items():
+        n = len(series)
+        lo = int(n * start_frac)
+        hi = int(n * end_frac)
+        sliced = [e for e in entries if lo <= e.entry_idx < hi]
+        out[key] = (series, sliced)
+    return out
+
+
 def run_asset_class_validation(
     *,
     demo: bool = False,
@@ -204,16 +237,13 @@ def run_asset_class_validation(
     print("  loading 4H series...", flush=True)
     series_map, errors, bars = load_series_map(keys, ["4h"], demo=demo)
 
-    print("  collecting ORIGINAL trending MH entries...", flush=True)
-    # Full series chronological: train / test
-    train_c = _collect_window(series_map, 0.0, train_fraction)
-    test_c = _collect_window(series_map, train_fraction, 1.0)
-
-    # Also three equal chronological thirds of the FULL sample for period robustness
-    # (each third is a separate OOS-style window; not used to fit parameters)
-    p1 = _collect_window(series_map, 0.0, 1 / 3)
-    p2 = _collect_window(series_map, 1 / 3, 2 / 3)
-    p3 = _collect_window(series_map, 2 / 3, 1.0)
+    print("  collecting ORIGINAL trending MH entries (single pass)...", flush=True)
+    full_c = _collect_full(series_map)
+    train_c = _slice_collected(full_c, 0.0, train_fraction)
+    test_c = _slice_collected(full_c, train_fraction, 1.0)
+    p1 = _slice_collected(full_c, 0.0, 1 / 3)
+    p2 = _slice_collected(full_c, 1 / 3, 2 / 3)
+    p3 = _slice_collected(full_c, 2 / 3, 1.0)
 
     print("  realizing control (fixed hold)...", flush=True)
     test_fixed = _realize(test_c, FIXED_HOLD)
