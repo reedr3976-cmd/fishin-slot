@@ -166,9 +166,15 @@ def realize_entries(
     series: CandleSeries,
     entries: list[EntrySignal],
     exit_policy: ExitPolicy = FIXED_HOLD,
+    *,
+    cost_override: Optional[float] = None,
 ) -> list[TradeResult]:
     """Apply an exit policy to a precomputed entry list (same entries)."""
-    cost = ROUND_TRIP_COST.get(series.asset_class, 0.001)
+    cost = (
+        float(cost_override)
+        if cost_override is not None
+        else ROUND_TRIP_COST.get(series.asset_class, 0.001)
+    )
     trades: list[TradeResult] = []
     for e in entries:
         exit_idx, exit_px, reason, r_mult = simulate_exit(

@@ -105,6 +105,10 @@ VALIDATION_REPORT_JSON = "output/validation_report.json"
 FOURH_DIAG_REPORT_TXT = "output/fourh_diagnostics_report.txt"
 FOURH_DIAG_REPORT_JSON = "output/fourh_diagnostics_report.json"
 
+# Asset-class / symbol validation (analysis only)
+ASSET_CLASS_VALIDATION_TXT = "output/asset_class_validation_report.txt"
+ASSET_CLASS_VALIDATION_JSON = "output/asset_class_validation_report.json"
+
 # Default timeframes for the beginner daily report
 DAILY_TIMEFRAMES = ["1d"]
 
