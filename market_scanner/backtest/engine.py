@@ -114,6 +114,8 @@ def backtest_series(
                     win=net > 0,
                     feature_flags=dict(opp.feature_flags),
                     rules_name=rules.name,
+                    atr_at_entry=float(opp.atr) if opp.atr is not None else None,
+                    exit_reason="fixed_hold",
                 )
             )
             i += horizon
