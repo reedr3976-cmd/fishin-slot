@@ -163,14 +163,30 @@ def build_atr_regime_report(result: dict[str, Any]) -> str:
             f"  Removed sample is small (n={rem_n}; need ≥ {MIN_SIGNALS_FOR_CONCLUSION}). "
             "Treat any B vs A difference cautiously."
         )
-    if improved_mh_avg or improved_mh_cum:
-        lines.append(
-            "  B looks better than A on MEDIUM+HIGH avg and/or cumulative on this TEST split."
-        )
     else:
-        lines.append(
-            "  B does not clearly improve MEDIUM+HIGH avg/cumulative vs A on this TEST split."
-        )
+        lines.append(f"  Removed MEDIUM+HIGH sample size n={rem_n} meets the minimum threshold.")
+
+    lines.append(
+        f"  MH average return: A={_pct(a_mh.avg_return)} → B={_pct(b_mh.avg_return)} "
+        f"({'improved' if improved_mh_avg else 'not improved'})."
+    )
+    lines.append(
+        f"  MH cumulative return: A={_pct(a_mh.cumulative_return)} → "
+        f"B={_pct(b_mh.cumulative_return)} "
+        f"({'improved' if improved_mh_cum else 'not improved'})."
+    )
+    kept_avg = br["kept_vs_removed_mh"]["kept_avg"]
+    rem_avg = br["kept_vs_removed_mh"]["removed_avg"]
+    if kept_avg is not None and rem_avg is not None:
+        if rem_avg > kept_avg:
+            lines.append(
+                "  Caution: removed high_atr MEDIUM/HIGH had a HIGHER average return than "
+                "kept signals — suppressing them can discard useful setups."
+            )
+        else:
+            lines.append(
+                "  Removed high_atr MEDIUM/HIGH had a lower average return than kept signals."
+            )
 
     if class_lifts:
         bits = ", ".join(
@@ -178,19 +194,23 @@ def build_atr_regime_report(result: dict[str, Any]) -> str:
         )
         lines.append(f"  Asset-class MH avg change A→B: {bits}")
     if broad:
-        lines.append("  Lift appears present in more than one asset class (broad-based hint).")
+        lines.append("  MH avg lift appears in more than one asset class (broad-based hint).")
     else:
+        lines.append("  No broad-based MH average-return lift across asset classes.")
+
+    # Mixed-sign sum makes "share" percentages misleading — flag that.
+    if rem_n > 0 and br["removed_sum_net"] is not None:
+        abs_sum = sum(abs(x["sum_net"]) for x in br["removed_by_instrument"]) or 0.0
+        if abs_sum > 0 and abs(br["removed_sum_net"]) < 0.25 * abs_sum:
+            lines.append(
+                "  Removed trades mix large winners and losers (net sum near a wash); "
+                "single-trade 'share of sum' figures can exceed 100% and are not stable."
+            )
+    if concentrated and rem_n >= 3:
         lines.append(
-            "  Lift is NOT clearly broad-based across asset classes "
-            "(or B did not improve MH avg)."
+            "  Path/drawdown effects may be driven by a few extreme removed trades "
+            f"(worst-3 vs removed-sum ratio ≈ {_pct(worst3)})."
         )
-    if concentrated:
-        lines.append(
-            "  Removed-trade PnL looks concentrated in a few trades "
-            f"(worst-3 share of removed sum ≈ {_pct(worst3)})."
-        )
-    else:
-        lines.append("  Removed-trade PnL does not look extremely concentrated in the worst 3.")
 
     lines.extend(
         [
