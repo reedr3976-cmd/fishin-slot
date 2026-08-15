@@ -181,19 +181,29 @@ def run_fourh_diagnostics(
     series_map, errors, bars = load_series_map(keys, ["4h"], demo=demo)
     mode = "demo" if demo else "public_historical"
 
-    print("  scoring TRAIN/TEST entries (once)...", flush=True)
+    print("  scoring TRAIN/TEST entries (once each)...", flush=True)
     train_all_c = _collect_map(
         series_map, start_frac=0.0, end_frac=train_fraction, require_trending=False
     )
     test_all_c = _collect_map(
         series_map, start_frac=train_fraction, end_frac=1.0, require_trending=False
     )
-    train_tr_c = _collect_map(
-        series_map, start_frac=0.0, end_frac=train_fraction, require_trending=True
-    )
-    test_tr_c = _collect_map(
-        series_map, start_frac=train_fraction, end_frac=1.0, require_trending=True
-    )
+
+    def _trending_only(collected):
+        out = {}
+        for key, (series, entries) in collected.items():
+            tr = [
+                e
+                for e in entries
+                if int((e.feature_flags or {}).get("sma_stack", 0) or 0) == 1
+            ]
+            out[key] = (series, tr)
+        return out
+
+    # Same chronological entry schedule as "all", filtered to sma_stack
+    # (keeps entry timestamps comparable; avoids a second full rescore).
+    train_tr_c = _trending_only(train_all_c)
+    test_tr_c = _trending_only(test_all_c)
 
     print("  realizing fixed-hold baselines...", flush=True)
     train_mh = _mh(_realize_map(train_all_c, FIXED_HOLD))
