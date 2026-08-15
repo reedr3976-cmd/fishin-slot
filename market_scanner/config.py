@@ -15,7 +15,7 @@ INSTRUMENTS: dict[str, dict[str, str]] = {
     "AUDUSD": {"symbol": "AUDUSD=X", "asset_class": "forex", "name": "Australian Dollar / US Dollar"},
     "USDCAD": {"symbol": "USDCAD=X", "asset_class": "forex", "name": "US Dollar / Canadian Dollar"},
     "USDCHF": {"symbol": "USDCHF=X", "asset_class": "forex", "name": "US Dollar / Swiss Franc"},
-    # Cryptocurrency (kept in catalog; excluded from active universe by default)
+    # Cryptocurrency (kept in catalog; excluded from active/live universe by default)
     "BTCUSD": {"symbol": "BTC-USD", "asset_class": "crypto", "name": "Bitcoin / US Dollar"},
     "ETHUSD": {"symbol": "ETH-USD", "asset_class": "crypto", "name": "Ethereum / US Dollar"},
     "SOLUSD": {"symbol": "SOL-USD", "asset_class": "crypto", "name": "Solana / US Dollar"},
@@ -23,11 +23,21 @@ INSTRUMENTS: dict[str, dict[str, str]] = {
     "XAUUSD": {"symbol": "GC=F", "asset_class": "commodity", "name": "Gold (COMEX)"},
     "XAGUSD": {"symbol": "SI=F", "asset_class": "commodity", "name": "Silver (COMEX)"},
     "USOIL": {"symbol": "CL=F", "asset_class": "commodity", "name": "Crude Oil WTI (NYMEX)"},
+    # Stocks / ETFs (catalog + analysis studies; live defaults unchanged until approved)
+    "SPY": {"symbol": "SPY", "asset_class": "stocks", "name": "SPDR S&P 500 ETF"},
+    "QQQ": {"symbol": "QQQ", "asset_class": "stocks", "name": "Invesco QQQ Trust"},
+    "AAPL": {"symbol": "AAPL", "asset_class": "stocks", "name": "Apple Inc."},
+    "MSFT": {"symbol": "MSFT", "asset_class": "stocks", "name": "Microsoft Corp."},
+    "XOM": {"symbol": "XOM", "asset_class": "stocks", "name": "Exxon Mobil Corp."},
+    "JPM": {"symbol": "JPM", "asset_class": "stocks", "name": "JPMorgan Chase & Co."},
 }
 
-# Active scan universe: Forex + commodities only (crypto disabled by default).
-# Pass asset_classes=["crypto"] or include crypto explicitly to re-enable.
+# Active LIVE scan universe: Forex + commodities only (crypto off; stocks not live yet).
+# Pass asset_classes explicitly or use STUDY_ASSET_CLASSES for analysis runners.
 ENABLED_ASSET_CLASSES: tuple[str, ...] = ("forex", "commodity")
+
+# Target product focus for analysis/diagnostics (not enabled live until approved).
+STUDY_ASSET_CLASSES: tuple[str, ...] = ("forex", "commodity", "stocks")
 
 
 def active_instruments(
@@ -41,6 +51,11 @@ def active_instruments(
 
 def default_asset_classes() -> list[str]:
     return list(ENABLED_ASSET_CLASSES)
+
+
+def study_instruments() -> dict[str, dict[str, str]]:
+    """Forex + commodities + stocks for analysis-only studies (no crypto)."""
+    return active_instruments(STUDY_ASSET_CLASSES)
 
 
 # Yahoo interval -> (chart interval, range string)
@@ -86,6 +101,10 @@ MIN_FEATURE_HITS_FOR_EDGE = 30
 VALIDATION_REPORT_TXT = "output/validation_report.txt"
 VALIDATION_REPORT_JSON = "output/validation_report.json"
 
+# 4H trending diagnostics (analysis only — live scanner unchanged)
+FOURH_DIAG_REPORT_TXT = "output/fourh_diagnostics_report.txt"
+FOURH_DIAG_REPORT_JSON = "output/fourh_diagnostics_report.json"
+
 # Default timeframes for the beginner daily report
 DAILY_TIMEFRAMES = ["1d"]
 
@@ -106,8 +125,8 @@ DAILY_SUMMARY_JSON = "output/daily_summary.json"
 # ---------------------------------------------------------------------------
 # Longer Yahoo ranges used only by the backtester (live scanner ranges unchanged).
 BACKTEST_TIMEFRAMES: dict[str, dict[str, str]] = {
-    "1h": {"interval": "60m", "range": "60d"},
-    "4h": {"interval": "60m", "range": "60d"},
+    "1h": {"interval": "60m", "range": "730d"},
+    "4h": {"interval": "60m", "range": "730d"},  # longer history for OOS 4H studies
     "1d": {"interval": "1d", "range": "5y"},
     "1wk": {"interval": "1wk", "range": "10y"},
 }
@@ -126,6 +145,7 @@ ROUND_TRIP_COST: dict[str, float] = {
     "forex": 0.0004,      # ~4 bps
     "crypto": 0.0020,     # ~20 bps
     "commodity": 0.0010,  # ~10 bps
+    "stocks": 0.0010,     # ~10 bps (ETF/large-cap proxy)
 }
 
 BACKTEST_WARMUP_BARS = 60  # need SMA50 + buffer before first signal
