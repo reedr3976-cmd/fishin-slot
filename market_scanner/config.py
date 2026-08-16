@@ -179,3 +179,21 @@ V3_MAX_DD_ACCEPT = 0.35
 V3_MIN_FOLDS_POSITIVE = 3
 V3_MIN_TRADES = 30
 V3_MIN_SYMBOLS_POSITIVE = 2
+
+# Scanner V4 research (analysis only — live ORIGINAL untouched; do not merge V3)
+SCANNER_V4_REPORT_TXT = "output/scanner_v4_report.txt"
+SCANNER_V4_REPORT_JSON = "output/scanner_v4_report.json"
+V4_TRAIN_FRACTION = 0.70
+V4_N_FOLDS = 4
+V4_MAX_DD_ACCEPT = 0.35
+V4_MIN_FOLDS_POSITIVE = 3
+V4_MIN_TRADES = 30
+V4_MIN_SYMBOLS_POSITIVE = 2
+V4_STRUCT_PIVOT = 2
+V4_ATR_STOP_MULT = 1.5
+V4_MAX_HOLD_BARS = 24
+# Pre-specified (not OOS-tuned) false-break distance in ATR units
+V4_MIN_BREAK_ATR = 0.25
+V4_PERSIST_BARS = 5
+# Stage 1 diagnostic: stock/commodity must beat FX OOS by this margin to justify Stage 2
+V4_CLASS_EDGE_MARGIN = 0.0  # expectancy units (fraction); any positive gap counts if SC>FX
