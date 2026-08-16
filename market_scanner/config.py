@@ -29,6 +29,16 @@ INSTRUMENTS: dict[str, dict[str, str]] = {
     "AAPL": {"symbol": "AAPL", "asset_class": "stock", "name": "Apple"},
     "MSFT": {"symbol": "MSFT", "asset_class": "stock", "name": "Microsoft"},
     "XOM": {"symbol": "XOM", "asset_class": "stock", "name": "Exxon Mobil"},
+    # V5 held-out stocks (research validation only — not used to tune V4_S1_STOCK)
+    "AMZN": {"symbol": "AMZN", "asset_class": "stock", "name": "Amazon"},
+    "GOOGL": {"symbol": "GOOGL", "asset_class": "stock", "name": "Alphabet"},
+    "META": {"symbol": "META", "asset_class": "stock", "name": "Meta Platforms"},
+    "NVDA": {"symbol": "NVDA", "asset_class": "stock", "name": "NVIDIA"},
+    "JPM": {"symbol": "JPM", "asset_class": "stock", "name": "JPMorgan Chase"},
+    "JNJ": {"symbol": "JNJ", "asset_class": "stock", "name": "Johnson & Johnson"},
+    "WMT": {"symbol": "WMT", "asset_class": "stock", "name": "Walmart"},
+    "BA": {"symbol": "BA", "asset_class": "stock", "name": "Boeing"},
+    "DIS": {"symbol": "DIS", "asset_class": "stock", "name": "Disney"},
 }
 
 # Active scan universe: Forex + commodities only (crypto disabled by default).
@@ -197,3 +207,36 @@ V4_MIN_BREAK_ATR = 0.25
 V4_PERSIST_BARS = 5
 # Stage 1 diagnostic: stock/commodity must beat FX OOS by this margin to justify Stage 2
 V4_CLASS_EDGE_MARGIN = 0.0  # expectancy units (fraction); any positive gap counts if SC>FX
+
+# Scanner V5 — independent robustness validation of frozen V4_S1_STOCK (no retune)
+SCANNER_V5_REPORT_TXT = "output/scanner_v5_report.txt"
+SCANNER_V5_REPORT_JSON = "output/scanner_v5_report.json"
+V5_TRAIN_FRACTION = 0.70
+V5_N_FOLDS = 4
+V5_MAX_DD_ACCEPT = 0.35
+V5_MIN_FOLDS_POSITIVE = 3
+V5_MIN_TRADES = 30
+V5_MIN_SYMBOLS_POSITIVE = 2
+V5_MC_RUNS = 500
+V5_MC_SEED = 42
+# Frozen V4_S1_STOCK parameters (DO NOT change based on V5 OOS)
+V5_FROZEN_LOOKBACK = 20
+V5_FROZEN_ATR_STOP_MULT = 1.5
+V5_FROZEN_MAX_HOLD = 24
+V5_FROZEN_STRUCT_PIVOT = 2
+V5_FROZEN_SMA_SLOPE_BARS = 3
+# V4 original stock universe vs V5 held-out validation names
+V5_V4_STOCKS: tuple[str, ...] = ("SPY", "QQQ", "AAPL", "MSFT", "XOM")
+V5_HELD_OUT_STOCKS: tuple[str, ...] = (
+    "AMZN",
+    "GOOGL",
+    "META",
+    "NVDA",
+    "JPM",
+    "JNJ",
+    "WMT",
+    "BA",
+    "DIS",
+)
+V5_COMMODITIES: tuple[str, ...] = ("XAUUSD", "XAGUSD", "USOIL")
+V5_ENTRY_SLIP_ATR = 0.05  # modest adverse entry slippage for stress
