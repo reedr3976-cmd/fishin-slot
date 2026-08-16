@@ -23,24 +23,79 @@ INSTRUMENTS: dict[str, dict[str, str]] = {
     "XAUUSD": {"symbol": "GC=F", "asset_class": "commodity", "name": "Gold (COMEX)"},
     "XAGUSD": {"symbol": "SI=F", "asset_class": "commodity", "name": "Silver (COMEX)"},
     "USOIL": {"symbol": "CL=F", "asset_class": "commodity", "name": "Crude Oil WTI (NYMEX)"},
+    # V7 research-only commodities (excluded from live ENABLED universe)
+    "NATGAS": {
+        "symbol": "NG=F",
+        "asset_class": "commodity",
+        "name": "Natural Gas (NYMEX)",
+        "research_only": True,
+    },
+    "COPPER": {
+        "symbol": "HG=F",
+        "asset_class": "commodity",
+        "name": "Copper (COMEX)",
+        "research_only": True,
+    },
+    "CORN": {
+        "symbol": "ZC=F",
+        "asset_class": "commodity",
+        "name": "Corn (CBOT)",
+        "research_only": True,
+    },
+    # Stocks / ETFs (catalog only — not in live ENABLED_ASSET_CLASSES)
+    "SPY": {"symbol": "SPY", "asset_class": "stock", "name": "S&P 500 ETF"},
+    "QQQ": {"symbol": "QQQ", "asset_class": "stock", "name": "Nasdaq 100 ETF"},
+    "AAPL": {"symbol": "AAPL", "asset_class": "stock", "name": "Apple"},
+    "MSFT": {"symbol": "MSFT", "asset_class": "stock", "name": "Microsoft"},
+    "XOM": {"symbol": "XOM", "asset_class": "stock", "name": "Exxon Mobil"},
+    # V5 held-out stocks (research validation only — not used to tune V4_S1_STOCK)
+    "AMZN": {"symbol": "AMZN", "asset_class": "stock", "name": "Amazon"},
+    "GOOGL": {"symbol": "GOOGL", "asset_class": "stock", "name": "Alphabet"},
+    "META": {"symbol": "META", "asset_class": "stock", "name": "Meta Platforms"},
+    "NVDA": {"symbol": "NVDA", "asset_class": "stock", "name": "NVIDIA"},
+    "JPM": {"symbol": "JPM", "asset_class": "stock", "name": "JPMorgan Chase"},
+    "JNJ": {"symbol": "JNJ", "asset_class": "stock", "name": "Johnson & Johnson"},
+    "WMT": {"symbol": "WMT", "asset_class": "stock", "name": "Walmart"},
+    "BA": {"symbol": "BA", "asset_class": "stock", "name": "Boeing"},
+    "DIS": {"symbol": "DIS", "asset_class": "stock", "name": "Disney"},
 }
 
 # Active scan universe: Forex + commodities only (crypto disabled by default).
 # Pass asset_classes=["crypto"] or include crypto explicitly to re-enable.
+# Live scanner unchanged — stocks remain research/backtest catalog only.
 ENABLED_ASSET_CLASSES: tuple[str, ...] = ("forex", "commodity")
+
+# Scanner V2 / research studies only (live defaults unchanged).
+STUDY_ASSET_CLASSES: tuple[str, ...] = ("forex", "commodity", "stock")
 
 
 def active_instruments(
     asset_classes: tuple[str, ...] | list[str] | None = None,
 ) -> dict[str, dict[str, str]]:
-    """Return instruments in the active universe (crypto off by default)."""
+    """Return instruments in the active universe (crypto off by default).
+
+    Instruments marked research_only are never included in the live/active
+    universe even when their asset_class is enabled.
+    """
     classes = tuple(asset_classes) if asset_classes is not None else ENABLED_ASSET_CLASSES
     allowed = set(classes)
-    return {k: v for k, v in INSTRUMENTS.items() if v["asset_class"] in allowed}
+    return {
+        k: v
+        for k, v in INSTRUMENTS.items()
+        if v["asset_class"] in allowed and not v.get("research_only")
+    }
 
 
 def default_asset_classes() -> list[str]:
     return list(ENABLED_ASSET_CLASSES)
+
+
+def study_instruments(
+    asset_classes: tuple[str, ...] | list[str] | None = None,
+) -> dict[str, dict[str, str]]:
+    """Research universe (forex + commodity + stock). Live ENABLED unchanged."""
+    classes = tuple(asset_classes) if asset_classes is not None else STUDY_ASSET_CLASSES
+    return active_instruments(classes)
 
 
 # Yahoo interval -> (chart interval, range string)
@@ -107,7 +162,8 @@ DAILY_SUMMARY_JSON = "output/daily_summary.json"
 # Longer Yahoo ranges used only by the backtester (live scanner ranges unchanged).
 BACKTEST_TIMEFRAMES: dict[str, dict[str, str]] = {
     "1h": {"interval": "60m", "range": "60d"},
-    "4h": {"interval": "60m", "range": "60d"},
+    # Longer 4h history for research/walk-forward (live TIMEFRAMES["4h"] unchanged).
+    "4h": {"interval": "60m", "range": "730d"},
     "1d": {"interval": "1d", "range": "5y"},
     "1wk": {"interval": "1wk", "range": "10y"},
 }
@@ -126,6 +182,7 @@ ROUND_TRIP_COST: dict[str, float] = {
     "forex": 0.0004,      # ~4 bps
     "crypto": 0.0020,     # ~20 bps
     "commodity": 0.0010,  # ~10 bps
+    "stock": 0.0010,      # ~10 bps (research catalog)
 }
 
 BACKTEST_WARMUP_BARS = 60  # need SMA50 + buffer before first signal
@@ -133,3 +190,206 @@ MIN_SIGNALS_FOR_CONCLUSION = 30  # below this, report is marked unreliable
 BACKTEST_DEFAULT_TIMEFRAMES = ["1d", "1wk"]
 BACKTEST_REPORT_TXT = "output/backtest_report.txt"
 BACKTEST_REPORT_JSON = "output/backtest_report.json"
+
+# Scanner V2 research (analysis only — does not enable live trading)
+SCANNER_V2_REPORT_TXT = "output/scanner_v2_report.txt"
+SCANNER_V2_REPORT_JSON = "output/scanner_v2_report.json"
+V2_RISK_FRACTION = 0.01  # 1% equity risk per trade (normalized across assets)
+V2_ATR_STOP_MULT = 1.5
+V2_ADX_MIN = 20.0
+V2_MAX_HOLD_BARS = 24  # safety cap on 4H (~4 days)
+V2_TRAIN_FRACTION = 0.70
+V2_N_FOLDS = 4
+
+# Scanner V3 research (analysis only — live ORIGINAL unchanged; V2 not merged live)
+SCANNER_V3_REPORT_TXT = "output/scanner_v3_report.txt"
+SCANNER_V3_REPORT_JSON = "output/scanner_v3_report.json"
+V3_BREAKOUT_LOOKBACK = 20
+V3_RR_TARGET = 2.0  # reward/risk for optional target exits
+V3_STRUCT_PIVOT = 2
+V3_MAX_HOLD_BARS = 24
+V3_ATR_STOP_MULT = 1.5
+V3_TRAIN_FRACTION = 0.70
+V3_N_FOLDS = 4
+# Promotion gates (OOS-focused; TRAIN is diagnostic only)
+V3_MAX_DD_ACCEPT = 0.35
+V3_MIN_FOLDS_POSITIVE = 3
+V3_MIN_TRADES = 30
+V3_MIN_SYMBOLS_POSITIVE = 2
+
+# Scanner V4 research (analysis only — live ORIGINAL untouched; do not merge V3)
+SCANNER_V4_REPORT_TXT = "output/scanner_v4_report.txt"
+SCANNER_V4_REPORT_JSON = "output/scanner_v4_report.json"
+V4_TRAIN_FRACTION = 0.70
+V4_N_FOLDS = 4
+V4_MAX_DD_ACCEPT = 0.35
+V4_MIN_FOLDS_POSITIVE = 3
+V4_MIN_TRADES = 30
+V4_MIN_SYMBOLS_POSITIVE = 2
+V4_STRUCT_PIVOT = 2
+V4_ATR_STOP_MULT = 1.5
+V4_MAX_HOLD_BARS = 24
+# Pre-specified (not OOS-tuned) false-break distance in ATR units
+V4_MIN_BREAK_ATR = 0.25
+V4_PERSIST_BARS = 5
+# Stage 1 diagnostic: stock/commodity must beat FX OOS by this margin to justify Stage 2
+V4_CLASS_EDGE_MARGIN = 0.0  # expectancy units (fraction); any positive gap counts if SC>FX
+
+# Scanner V5 — independent robustness validation of frozen V4_S1_STOCK (no retune)
+SCANNER_V5_REPORT_TXT = "output/scanner_v5_report.txt"
+SCANNER_V5_REPORT_JSON = "output/scanner_v5_report.json"
+V5_TRAIN_FRACTION = 0.70
+V5_N_FOLDS = 4
+V5_MAX_DD_ACCEPT = 0.35
+V5_MIN_FOLDS_POSITIVE = 3
+V5_MIN_TRADES = 30
+V5_MIN_SYMBOLS_POSITIVE = 2
+V5_MC_RUNS = 500
+V5_MC_SEED = 42
+# Frozen V4_S1_STOCK parameters (DO NOT change based on V5 OOS)
+V5_FROZEN_LOOKBACK = 20
+V5_FROZEN_ATR_STOP_MULT = 1.5
+V5_FROZEN_MAX_HOLD = 24
+V5_FROZEN_STRUCT_PIVOT = 2
+V5_FROZEN_SMA_SLOPE_BARS = 3
+# V4 original stock universe vs V5 held-out validation names
+V5_V4_STOCKS: tuple[str, ...] = ("SPY", "QQQ", "AAPL", "MSFT", "XOM")
+V5_HELD_OUT_STOCKS: tuple[str, ...] = (
+    "AMZN",
+    "GOOGL",
+    "META",
+    "NVDA",
+    "JPM",
+    "JNJ",
+    "WMT",
+    "BA",
+    "DIS",
+)
+V5_COMMODITIES: tuple[str, ...] = ("XAUUSD", "XAGUSD", "USOIL")
+V5_ENTRY_SLIP_ATR = 0.05  # modest adverse entry slippage for stress
+
+# Scanner V6 — clean strategy-family reset (research only; V4/V5 falsified)
+SCANNER_V6_REPORT_TXT = "output/scanner_v6_report.txt"
+SCANNER_V6_REPORT_JSON = "output/scanner_v6_report.json"
+V6_TRAIN_FRACTION = 0.70
+V6_N_FOLDS = 4
+V6_MAX_DD_ACCEPT = 0.35
+V6_MIN_FOLDS_POSITIVE = 3
+V6_MIN_TRADES = 25
+V6_MIN_SYMBOLS_POSITIVE = 2
+V6_MC_RUNS = 200
+V6_MC_SEED = 7
+V6_ATR_STOP_MULT = 1.5
+V6_MAX_HOLD = 24
+V6_LOOKBACK = 20
+V6_VOL_ATR_MULT = 1.2
+V6_ENTRY_SLIP_ATR = 0.05
+# Discovery vs held-out (held-out NEVER used for family selection)
+V6_STOCK_DISCOVERY: tuple[str, ...] = ("SPY", "QQQ", "AAPL", "MSFT", "XOM")
+V6_STOCK_HELDOUT: tuple[str, ...] = (
+    "AMZN",
+    "GOOGL",
+    "META",
+    "NVDA",
+    "JPM",
+    "JNJ",
+    "WMT",
+    "BA",
+    "DIS",
+)
+V6_COMMODITY_DISCOVERY: tuple[str, ...] = ("XAUUSD", "XAGUSD")
+V6_COMMODITY_HELDOUT: tuple[str, ...] = ("USOIL",)
+V6_FX_DISCOVERY: tuple[str, ...] = ("EURUSD", "GBPUSD", "USDJPY")
+V6_FX_HELDOUT: tuple[str, ...] = ("AUDUSD", "USDCAD", "USDCHF")
+
+# Scanner V7 — robustness research after V6 FAIL (research only; no live changes)
+SCANNER_V7_REPORT_TXT = "output/scanner_v7_report.txt"
+SCANNER_V7_REPORT_JSON = "output/scanner_v7_report.json"
+V7_TRAIN_FRACTION = 0.70
+V7_N_FOLDS = 4
+V7_MAX_DD_ACCEPT = 0.35
+V7_MIN_FOLDS_POSITIVE = 3
+V7_MIN_TRADES = 25
+V7_MIN_HELDOUT_TRADES = 15  # strengthen V6 caution into a hard gate
+V7_MIN_SYMBOLS_POSITIVE = 2
+V7_MC_RUNS = 200
+V7_MC_SEED = 11
+V7_ATR_STOP_MULT = 1.5
+V7_MAX_HOLD = 24
+V7_LOOKBACK = 20
+V7_VOL_ATR_MULT = 1.2
+V7_VOL_LOOKBACK = 5  # recent expansion window for pullback-after-expansion
+V7_ENTRY_SLIP_ATR = 0.05
+V7_ADX_MIN = 20.0
+# Discovery vs held-out (held-out NEVER used for family selection)
+V7_STOCK_DISCOVERY: tuple[str, ...] = ("SPY", "QQQ", "AAPL", "MSFT", "XOM")
+V7_STOCK_HELDOUT: tuple[str, ...] = (
+    "AMZN",
+    "GOOGL",
+    "META",
+    "NVDA",
+    "JPM",
+    "JNJ",
+    "WMT",
+    "BA",
+    "DIS",
+)
+# Pre-specified wider commodity panel to test cross-commodity vol behaviour
+# (discovery includes oil so concentration can be detected on TRAIN; held-out
+# is non-oil sectors). Research-only symbols never enter live ENABLED universe.
+V7_COMMODITY_DISCOVERY: tuple[str, ...] = ("XAUUSD", "XAGUSD", "USOIL")
+V7_COMMODITY_HELDOUT: tuple[str, ...] = ("NATGAS", "COPPER", "CORN")
+V7_FX_DISCOVERY: tuple[str, ...] = ("EURUSD", "GBPUSD", "USDJPY")
+V7_FX_HELDOUT: tuple[str, ...] = ("AUDUSD", "USDCAD", "USDCHF")
+
+# Scanner V8 — generalisation research after V7 FAIL (research only; no live changes)
+SCANNER_V8_REPORT_TXT = "output/scanner_v8_report.txt"
+SCANNER_V8_REPORT_JSON = "output/scanner_v8_report.json"
+# Nested chronological splits (DEV instruments). FINAL_TIME untouched until after freeze.
+V8_TRAIN_END = 0.55
+V8_VAL_END = 0.75  # VAL = [TRAIN_END, VAL_END); FINAL_TIME = [VAL_END, 1.0)
+V8_N_FOLDS = 4
+V8_MAX_DD_ACCEPT = 0.35
+V8_MIN_FOLDS_POSITIVE = 3
+V8_MIN_TRADES = 25
+V8_MIN_HELDOUT_TRADES = 15
+V8_MIN_SYMBOLS_POSITIVE = 2
+V8_MC_RUNS = 200
+V8_MC_SEED = 13
+V8_ATR_STOP_MULT = 1.5
+V8_MAX_HOLD = 24
+V8_LOOKBACK = 20
+V8_VOL_ATR_MULT = 1.2
+V8_COMPRESS_MULT = 0.85  # ATR% ≤ this × median ⇒ compression
+V8_ENTRY_SLIP_ATR = 0.05
+V8_ADX_MIN = 20.0
+V8_RS_LOOKBACK = 20  # bars for relative-strength vs SPY
+V8_MIN_ROTATION_POSITIVE = 2  # of 3 instrument-holdout rotations
+# DEV instruments (selection + VAL + folds + rotations). FINAL_INST never used until freeze.
+V8_STOCK_DEV: tuple[str, ...] = (
+    "SPY",
+    "QQQ",
+    "AAPL",
+    "MSFT",
+    "XOM",
+    "AMZN",
+    "GOOGL",
+    "META",
+    "JPM",
+)
+V8_STOCK_FINAL_INST: tuple[str, ...] = ("NVDA", "JNJ", "WMT", "BA", "DIS")
+# Commodity: universal DEV vs energy/metals/softs final; plus metals-only DEV
+V8_COMM_DEV: tuple[str, ...] = ("XAUUSD", "XAGUSD", "USOIL")
+V8_COMM_FINAL_INST: tuple[str, ...] = ("NATGAS", "COPPER", "CORN")
+V8_METALS_DEV: tuple[str, ...] = ("XAUUSD", "XAGUSD")
+V8_METALS_FINAL_INST: tuple[str, ...] = ("COPPER",)
+V8_ENERGY_DEV: tuple[str, ...] = ("USOIL",)
+V8_ENERGY_FINAL_INST: tuple[str, ...] = ("NATGAS",)
+V8_FX_DEV: tuple[str, ...] = ("EURUSD", "GBPUSD", "USDJPY")
+V8_FX_FINAL_INST: tuple[str, ...] = ("AUDUSD", "USDCAD", "USDCHF")
+# Pre-specified instrument rotation groups within stock DEV (never uses FINAL_INST)
+V8_STOCK_ROTATIONS: tuple[tuple[str, ...], ...] = (
+    ("AMZN", "GOOGL", "META"),  # held out while training on remaining DEV
+    ("AAPL", "MSFT", "XOM"),
+    ("SPY", "QQQ", "JPM"),
+)
