@@ -163,3 +163,19 @@ V2_ADX_MIN = 20.0
 V2_MAX_HOLD_BARS = 24  # safety cap on 4H (~4 days)
 V2_TRAIN_FRACTION = 0.70
 V2_N_FOLDS = 4
+
+# Scanner V3 research (analysis only — live ORIGINAL unchanged; V2 not merged live)
+SCANNER_V3_REPORT_TXT = "output/scanner_v3_report.txt"
+SCANNER_V3_REPORT_JSON = "output/scanner_v3_report.json"
+V3_BREAKOUT_LOOKBACK = 20
+V3_RR_TARGET = 2.0  # reward/risk for optional target exits
+V3_STRUCT_PIVOT = 2
+V3_MAX_HOLD_BARS = 24
+V3_ATR_STOP_MULT = 1.5
+V3_TRAIN_FRACTION = 0.70
+V3_N_FOLDS = 4
+# Promotion gates (OOS-focused; TRAIN is diagnostic only)
+V3_MAX_DD_ACCEPT = 0.35
+V3_MIN_FOLDS_POSITIVE = 3
+V3_MIN_TRADES = 30
+V3_MIN_SYMBOLS_POSITIVE = 2
