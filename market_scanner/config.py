@@ -23,11 +23,21 @@ INSTRUMENTS: dict[str, dict[str, str]] = {
     "XAUUSD": {"symbol": "GC=F", "asset_class": "commodity", "name": "Gold (COMEX)"},
     "XAGUSD": {"symbol": "SI=F", "asset_class": "commodity", "name": "Silver (COMEX)"},
     "USOIL": {"symbol": "CL=F", "asset_class": "commodity", "name": "Crude Oil WTI (NYMEX)"},
+    # Stocks / ETFs (catalog only — not in live ENABLED_ASSET_CLASSES)
+    "SPY": {"symbol": "SPY", "asset_class": "stock", "name": "S&P 500 ETF"},
+    "QQQ": {"symbol": "QQQ", "asset_class": "stock", "name": "Nasdaq 100 ETF"},
+    "AAPL": {"symbol": "AAPL", "asset_class": "stock", "name": "Apple"},
+    "MSFT": {"symbol": "MSFT", "asset_class": "stock", "name": "Microsoft"},
+    "XOM": {"symbol": "XOM", "asset_class": "stock", "name": "Exxon Mobil"},
 }
 
 # Active scan universe: Forex + commodities only (crypto disabled by default).
 # Pass asset_classes=["crypto"] or include crypto explicitly to re-enable.
+# Live scanner unchanged — stocks remain research/backtest catalog only.
 ENABLED_ASSET_CLASSES: tuple[str, ...] = ("forex", "commodity")
+
+# Scanner V2 / research studies only (live defaults unchanged).
+STUDY_ASSET_CLASSES: tuple[str, ...] = ("forex", "commodity", "stock")
 
 
 def active_instruments(
@@ -41,6 +51,14 @@ def active_instruments(
 
 def default_asset_classes() -> list[str]:
     return list(ENABLED_ASSET_CLASSES)
+
+
+def study_instruments(
+    asset_classes: tuple[str, ...] | list[str] | None = None,
+) -> dict[str, dict[str, str]]:
+    """Research universe (forex + commodity + stock). Live ENABLED unchanged."""
+    classes = tuple(asset_classes) if asset_classes is not None else STUDY_ASSET_CLASSES
+    return active_instruments(classes)
 
 
 # Yahoo interval -> (chart interval, range string)
@@ -107,7 +125,8 @@ DAILY_SUMMARY_JSON = "output/daily_summary.json"
 # Longer Yahoo ranges used only by the backtester (live scanner ranges unchanged).
 BACKTEST_TIMEFRAMES: dict[str, dict[str, str]] = {
     "1h": {"interval": "60m", "range": "60d"},
-    "4h": {"interval": "60m", "range": "60d"},
+    # Longer 4h history for research/walk-forward (live TIMEFRAMES["4h"] unchanged).
+    "4h": {"interval": "60m", "range": "730d"},
     "1d": {"interval": "1d", "range": "5y"},
     "1wk": {"interval": "1wk", "range": "10y"},
 }
@@ -126,6 +145,7 @@ ROUND_TRIP_COST: dict[str, float] = {
     "forex": 0.0004,      # ~4 bps
     "crypto": 0.0020,     # ~20 bps
     "commodity": 0.0010,  # ~10 bps
+    "stock": 0.0010,      # ~10 bps (research catalog)
 }
 
 BACKTEST_WARMUP_BARS = 60  # need SMA50 + buffer before first signal
@@ -133,3 +153,29 @@ MIN_SIGNALS_FOR_CONCLUSION = 30  # below this, report is marked unreliable
 BACKTEST_DEFAULT_TIMEFRAMES = ["1d", "1wk"]
 BACKTEST_REPORT_TXT = "output/backtest_report.txt"
 BACKTEST_REPORT_JSON = "output/backtest_report.json"
+
+# Scanner V2 research (analysis only — does not enable live trading)
+SCANNER_V2_REPORT_TXT = "output/scanner_v2_report.txt"
+SCANNER_V2_REPORT_JSON = "output/scanner_v2_report.json"
+V2_RISK_FRACTION = 0.01  # 1% equity risk per trade (normalized across assets)
+V2_ATR_STOP_MULT = 1.5
+V2_ADX_MIN = 20.0
+V2_MAX_HOLD_BARS = 24  # safety cap on 4H (~4 days)
+V2_TRAIN_FRACTION = 0.70
+V2_N_FOLDS = 4
+
+# Scanner V3 research (analysis only — live ORIGINAL unchanged; V2 not merged live)
+SCANNER_V3_REPORT_TXT = "output/scanner_v3_report.txt"
+SCANNER_V3_REPORT_JSON = "output/scanner_v3_report.json"
+V3_BREAKOUT_LOOKBACK = 20
+V3_RR_TARGET = 2.0  # reward/risk for optional target exits
+V3_STRUCT_PIVOT = 2
+V3_MAX_HOLD_BARS = 24
+V3_ATR_STOP_MULT = 1.5
+V3_TRAIN_FRACTION = 0.70
+V3_N_FOLDS = 4
+# Promotion gates (OOS-focused; TRAIN is diagnostic only)
+V3_MAX_DD_ACCEPT = 0.35
+V3_MIN_FOLDS_POSITIVE = 3
+V3_MIN_TRADES = 30
+V3_MIN_SYMBOLS_POSITIVE = 2
