@@ -341,3 +341,55 @@ V7_COMMODITY_DISCOVERY: tuple[str, ...] = ("XAUUSD", "XAGUSD", "USOIL")
 V7_COMMODITY_HELDOUT: tuple[str, ...] = ("NATGAS", "COPPER", "CORN")
 V7_FX_DISCOVERY: tuple[str, ...] = ("EURUSD", "GBPUSD", "USDJPY")
 V7_FX_HELDOUT: tuple[str, ...] = ("AUDUSD", "USDCAD", "USDCHF")
+
+# Scanner V8 — generalisation research after V7 FAIL (research only; no live changes)
+SCANNER_V8_REPORT_TXT = "output/scanner_v8_report.txt"
+SCANNER_V8_REPORT_JSON = "output/scanner_v8_report.json"
+# Nested chronological splits (DEV instruments). FINAL_TIME untouched until after freeze.
+V8_TRAIN_END = 0.55
+V8_VAL_END = 0.75  # VAL = [TRAIN_END, VAL_END); FINAL_TIME = [VAL_END, 1.0)
+V8_N_FOLDS = 4
+V8_MAX_DD_ACCEPT = 0.35
+V8_MIN_FOLDS_POSITIVE = 3
+V8_MIN_TRADES = 25
+V8_MIN_HELDOUT_TRADES = 15
+V8_MIN_SYMBOLS_POSITIVE = 2
+V8_MC_RUNS = 200
+V8_MC_SEED = 13
+V8_ATR_STOP_MULT = 1.5
+V8_MAX_HOLD = 24
+V8_LOOKBACK = 20
+V8_VOL_ATR_MULT = 1.2
+V8_COMPRESS_MULT = 0.85  # ATR% ≤ this × median ⇒ compression
+V8_ENTRY_SLIP_ATR = 0.05
+V8_ADX_MIN = 20.0
+V8_RS_LOOKBACK = 20  # bars for relative-strength vs SPY
+V8_MIN_ROTATION_POSITIVE = 2  # of 3 instrument-holdout rotations
+# DEV instruments (selection + VAL + folds + rotations). FINAL_INST never used until freeze.
+V8_STOCK_DEV: tuple[str, ...] = (
+    "SPY",
+    "QQQ",
+    "AAPL",
+    "MSFT",
+    "XOM",
+    "AMZN",
+    "GOOGL",
+    "META",
+    "JPM",
+)
+V8_STOCK_FINAL_INST: tuple[str, ...] = ("NVDA", "JNJ", "WMT", "BA", "DIS")
+# Commodity: universal DEV vs energy/metals/softs final; plus metals-only DEV
+V8_COMM_DEV: tuple[str, ...] = ("XAUUSD", "XAGUSD", "USOIL")
+V8_COMM_FINAL_INST: tuple[str, ...] = ("NATGAS", "COPPER", "CORN")
+V8_METALS_DEV: tuple[str, ...] = ("XAUUSD", "XAGUSD")
+V8_METALS_FINAL_INST: tuple[str, ...] = ("COPPER",)
+V8_ENERGY_DEV: tuple[str, ...] = ("USOIL",)
+V8_ENERGY_FINAL_INST: tuple[str, ...] = ("NATGAS",)
+V8_FX_DEV: tuple[str, ...] = ("EURUSD", "GBPUSD", "USDJPY")
+V8_FX_FINAL_INST: tuple[str, ...] = ("AUDUSD", "USDCAD", "USDCHF")
+# Pre-specified instrument rotation groups within stock DEV (never uses FINAL_INST)
+V8_STOCK_ROTATIONS: tuple[tuple[str, ...], ...] = (
+    ("AMZN", "GOOGL", "META"),  # held out while training on remaining DEV
+    ("AAPL", "MSFT", "XOM"),
+    ("SPY", "QQQ", "JPM"),
+)
