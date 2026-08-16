@@ -240,3 +240,37 @@ V5_HELD_OUT_STOCKS: tuple[str, ...] = (
 )
 V5_COMMODITIES: tuple[str, ...] = ("XAUUSD", "XAGUSD", "USOIL")
 V5_ENTRY_SLIP_ATR = 0.05  # modest adverse entry slippage for stress
+
+# Scanner V6 — clean strategy-family reset (research only; V4/V5 falsified)
+SCANNER_V6_REPORT_TXT = "output/scanner_v6_report.txt"
+SCANNER_V6_REPORT_JSON = "output/scanner_v6_report.json"
+V6_TRAIN_FRACTION = 0.70
+V6_N_FOLDS = 4
+V6_MAX_DD_ACCEPT = 0.35
+V6_MIN_FOLDS_POSITIVE = 3
+V6_MIN_TRADES = 25
+V6_MIN_SYMBOLS_POSITIVE = 2
+V6_MC_RUNS = 400
+V6_MC_SEED = 7
+V6_ATR_STOP_MULT = 1.5
+V6_MAX_HOLD = 24
+V6_LOOKBACK = 20
+V6_VOL_ATR_MULT = 1.2
+V6_ENTRY_SLIP_ATR = 0.05
+# Discovery vs held-out (held-out NEVER used for family selection)
+V6_STOCK_DISCOVERY: tuple[str, ...] = ("SPY", "QQQ", "AAPL", "MSFT", "XOM")
+V6_STOCK_HELDOUT: tuple[str, ...] = (
+    "AMZN",
+    "GOOGL",
+    "META",
+    "NVDA",
+    "JPM",
+    "JNJ",
+    "WMT",
+    "BA",
+    "DIS",
+)
+V6_COMMODITY_DISCOVERY: tuple[str, ...] = ("XAUUSD", "XAGUSD")
+V6_COMMODITY_HELDOUT: tuple[str, ...] = ("USOIL",)
+V6_FX_DISCOVERY: tuple[str, ...] = ("EURUSD", "GBPUSD", "USDJPY")
+V6_FX_HELDOUT: tuple[str, ...] = ("AUDUSD", "USDCAD", "USDCHF")
