@@ -244,7 +244,7 @@ def backtest_family(
     max_hold: int = V6_MAX_HOLD,
 ) -> list[V2Trade]:
     _ = lookback  # families use module constants; sensitivity may patch via globals later
-    feat = _feat(series)
+    feat = _feat_cached(series)
     warmup = max(BACKTEST_WARMUP_BARS, SMA_SLOW + 5, V6_LOOKBACK + 5)
     n = len(series)
     i = max(warmup, start_idx or warmup)

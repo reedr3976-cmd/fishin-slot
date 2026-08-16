@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from collections import defaultdict
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Optional
 
 import numpy as np
@@ -134,6 +135,42 @@ def gate_from(
     return checks
 
 
+def decision_from_gate(gate: dict[str, Any], *, test_n: int) -> dict[str, Any]:
+    """Explicit PASS/FAIL with human-readable reasons (every candidate)."""
+    reasons_fail: list[str] = []
+    label_map = {
+        "positive_discovery_oos": "discovery OOS expectancy ≤ 0",
+        "positive_heldout_oos": "held-out OOS expectancy ≤ 0",
+        "resilient_2x": "fails 2× cost resilience",
+        "folds_ge_3": f"positive folds {gate.get('folds_positive_count')}/4 (<3)",
+        "adequate_n": f"inadequate trade count n={test_n} (need ≥{V6_MIN_TRADES})",
+        "acceptable_dd": "maximum drawdown above acceptance threshold",
+        "multi_symbol": "edge not distributed across enough symbols",
+        "not_one_symbol": "profit concentrated in one symbol (≥70% of positive PnL)",
+        "not_fragile": "fragile to nearby parameter changes",
+    }
+    for k, msg in label_map.items():
+        if not gate.get(k):
+            reasons_fail.append(msg)
+    # Overfitting / thin-sample guards (extra explicit messaging)
+    if test_n < V6_MIN_TRADES:
+        reasons_fail.append("reject: too few OOS trades (overfit / noise risk)")
+    if gate.get("heldout_n", 0) < 10 and gate.get("positive_heldout_oos"):
+        reasons_fail.append("held-out sample very small — treat positive held-out with caution")
+    passed = bool(gate.get("all_pass")) and not any("too few OOS" in r for r in reasons_fail)
+    # all_pass already encodes the core gates; keep consistent
+    passed = bool(gate.get("all_pass"))
+    return {
+        "decision": "PASS" if passed else "FAIL",
+        "reason": (
+            "Meets discovery OOS, held-out OOS, folds, cost stress, sensitivity, "
+            "and multi-symbol robustness gates."
+            if passed
+            else "; ".join(reasons_fail) if reasons_fail else "failed robustness gates"
+        ),
+    }
+
+
 def evaluate_family(
     series_4h: dict,
     daily_map: dict,
@@ -224,6 +261,7 @@ def evaluate_family(
     best = sym["best_symbols"]
     drop1 = leave_out_symbols(test, {best[0]} if best else set())
     g = gate_from(test, test_2x, fold_exps, held_test, sens_pos, len(sens))
+    decision = decision_from_gate(g, test_n=len(test))
 
     return {
         "family_key": family.key,
@@ -246,6 +284,8 @@ def evaluate_family(
         "sensitivity": sens,
         "monte_carlo": monte_carlo(test, n_runs=V6_MC_RUNS, seed=V6_MC_SEED),
         "gate": g,
+        "decision": decision["decision"],
+        "decision_reason": decision["reason"],
     }
 
 
@@ -278,6 +318,67 @@ def select_on_train(results: list[dict]) -> Optional[dict]:
     return max(elig, key=lambda r: r.get("train_expectancy") or float("-inf"))
 
 
+def _v5_comparison() -> dict[str, Any]:
+    """Compare V6 vs prior V5 stock falsification (research context only)."""
+    path = Path(__file__).resolve().parent.parent / "output" / "scanner_v5_report.json"
+    if not path.exists():
+        return {
+            "available": False,
+            "note": "V5 report not found on disk; comparison skipped.",
+        }
+    v5 = json.loads(path.read_text(encoding="utf-8"))
+    held = (v5.get("held_out_stocks") or {}).get("test") or {}
+    v4s = (v5.get("v4_original_stocks") or {}).get("test") or {}
+    return {
+        "available": True,
+        "v5_verdict": v5.get("verdict"),
+        "v5_heldout_stocks_oos_exp": held.get("expectancy"),
+        "v5_heldout_stocks_n": held.get("signals"),
+        "v5_v4_stocks_oos_exp": v4s.get("expectancy"),
+        "note": (
+            "V5 falsified V4_S1_STOCK on held-out stocks. V6 is a clean family reset; "
+            "improvement requires a V6 candidate that PASSes gates including held-out OOS. "
+            "A higher TRAIN or discovery-TEST number alone is not an improvement."
+        ),
+    }
+
+
+def build_final_summary(by_class: dict[str, Any]) -> list[dict[str, Any]]:
+    """One row per (asset class × family) with required review fields."""
+    rows = []
+    for cls, block in by_class.items():
+        for name, r in (block.get("families") or {}).items():
+            te = r.get("test") or {}
+            ho = r.get("heldout_test") or {}
+            t2 = r.get("test_2x") or {}
+            mc = r.get("monte_carlo") or {}
+            rows.append(
+                {
+                    "candidate": name,
+                    "family_key": r.get("family_key"),
+                    "market_class": cls,
+                    "train_selected": name == block.get("train_selected_family"),
+                    "trades_oos": te.get("signals"),
+                    "win_rate": te.get("win_rate"),
+                    "profit_factor": te.get("profit_factor"),
+                    "expectancy": te.get("expectancy"),
+                    "max_drawdown": te.get("max_drawdown"),
+                    "oos_expectancy": te.get("expectancy"),
+                    "heldout_expectancy": ho.get("expectancy"),
+                    "heldout_trades": ho.get("signals"),
+                    "stress_2x_expectancy": t2.get("expectancy"),
+                    "stress_slip_expectancy": (r.get("test_slip") or {}).get("expectancy"),
+                    "monte_carlo_dd_median": ((mc.get("max_drawdown") or {}).get("median")),
+                    "monte_carlo_dd_p95": ((mc.get("max_drawdown") or {}).get("p95")),
+                    "monte_carlo_total_return_median": ((mc.get("total_return") or {}).get("median")),
+                    "folds_positive": (r.get("gate") or {}).get("folds_positive_count"),
+                    "decision": r.get("decision"),
+                    "reason": r.get("decision_reason"),
+                }
+            )
+    return rows
+
+
 def build_v6_payload(series_4h: dict, daily_map: dict) -> dict[str, Any]:
     by_class: dict[str, Any] = {}
     promoted: list[dict] = []
@@ -297,22 +398,24 @@ def build_v6_payload(series_4h: dict, daily_map: dict) -> dict[str, Any]:
             )
         train_pick = select_on_train(fam_results)
         pick_name = train_pick["name"] if train_pick else None
-        # Promotion uses OOS/held-out gates on TRAIN-selected family only
         candidate = next((r for r in fam_results if r["name"] == pick_name), None)
-        verdict = "FAIL"
-        if candidate and candidate["gate"].get("all_pass"):
-            verdict = "PASS"
+        # Class-level promote only if TRAIN-selected candidate PASSes
+        class_verdict = "FAIL"
+        if candidate and candidate.get("decision") == "PASS":
+            class_verdict = "PASS"
             promoted.append(
                 {
                     "asset_class": ac["name"],
                     "family": candidate["name"],
                     "notes": candidate["notes"],
                     "gate": candidate["gate"],
+                    "decision_reason": candidate.get("decision_reason"),
                 }
             )
-        elif candidate:
-            # Near-miss note
-            verdict = "FAIL"
+        # Any accidental PASS on non-selected family is reported but not promoted
+        other_pass = [
+            r["name"] for r in fam_results if r.get("decision") == "PASS" and r["name"] != pick_name
+        ]
         by_class[ac["name"]] = {
             "discovery_symbols": list(ac["discovery"]),
             "heldout_symbols": list(ac["heldout"]),
@@ -320,15 +423,28 @@ def build_v6_payload(series_4h: dict, daily_map: dict) -> dict[str, Any]:
             "train_selected_family": pick_name,
             "train_selection_rule": "max TRAIN expectancy among families with n≥20 (OOS unused)",
             "selected_gate": (candidate or {}).get("gate"),
-            "class_verdict": verdict,
+            "selected_decision": (candidate or {}).get("decision"),
+            "other_families_passing_gates": other_pass,
+            "class_verdict": class_verdict,
         }
 
+    summary = build_final_summary(by_class)
+    any_pass = any(r["decision"] == "PASS" for r in summary)
     if promoted:
-        overall = "V6 PARTIAL PASS — see per-class PASS candidates (not enabled for paper/live)"
+        overall = "V6 PARTIAL PASS — TRAIN-selected candidate(s) passed gates (not enabled for paper/live)"
         code = "V6_PARTIAL_PASS"
+    elif any_pass:
+        overall = (
+            "V6 FAIL FOR PROMOTION — some non-selected families meet gates, but "
+            "TRAIN-frozen selection did not; do not cherry-pick OOS winners"
+        )
+        code = "V6_FAIL"
     else:
         overall = "V6 FAIL — no candidate passed independent robustness standards"
         code = "V6_FAIL"
+
+    v5cmp = _v5_comparison()
+    genuine_improvement = bool(promoted)  # only a gated PASS counts vs falsified V5
 
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -336,13 +452,26 @@ def build_v6_payload(series_4h: dict, daily_map: dict) -> dict[str, Any]:
         "families_tested": [{"key": f.key, "name": f.name, "notes": f.notes} for f in FAMILIES],
         "selection_rule": "Per asset class: choose family on TRAIN only, then freeze; evaluate TEST/held-out/costs/sensitivity/MC",
         "by_asset_class": by_class,
+        "final_candidate_summary": summary,
+        "v5_comparison": v5cmp,
+        "genuine_improvement_vs_v5": genuine_improvement,
+        "improvement_note": (
+            "Yes — at least one TRAIN-selected V6 candidate passed independent gates "
+            "(V5 had no robust stock candidate)."
+            if genuine_improvement
+            else (
+                "No — V6 does not provide a genuine improvement over the falsified V5 "
+                "stock hypothesis. No TRAIN-selected candidate cleared held-out/OOS/"
+                "cost/sensitivity gates."
+            )
+        ),
         "promoted_candidates": promoted,
         "verdict_code": code,
         "verdict": overall,
         "next_stage": (
             [
                 {
-                    "action": "Independent validation protocol (similar to V5) before any paper trading",
+                    "action": "Independent validation protocol before any paper trading",
                     "candidate": p,
                 }
                 for p in promoted
@@ -394,14 +523,40 @@ def format_v6_report(payload: dict[str, Any]) -> str:
                 a(f"      {s:8s} n={m.get('signals', 0):3d} exp={_bps(m.get('expectancy'))}")
             a(f"    sensitivity: {r.get('sensitivity')}")
             a(f"    monte_carlo: {r.get('monte_carlo')}")
+            a(f"    DECISION: {r.get('decision')} — {r.get('decision_reason')}")
             a(f"    GATE all_pass={((r.get('gate') or {}).get('all_pass'))} {r.get('gate')}")
         a("")
 
+    a("=" * 72)
+    a("FINAL CANDIDATE SUMMARY (all families × market classes)")
+    a("=" * 72)
+    for row in payload.get("final_candidate_summary") or []:
+        a(
+            f"  [{row.get('decision')}] {row.get('market_class'):11s} {row.get('candidate')} "
+            f"{'(TRAIN-selected) ' if row.get('train_selected') else ''}"
+            f"n={row.get('trades_oos')} win={_pct(row.get('win_rate'))} "
+            f"PF={_pf(row.get('profit_factor'))} exp={_bps(row.get('expectancy'))} "
+            f"DD={_pct(row.get('max_drawdown'))} "
+            f"OOS={_bps(row.get('oos_expectancy'))} held={_bps(row.get('heldout_expectancy'))} "
+            f"2x={_bps(row.get('stress_2x_expectancy'))} "
+            f"MC_dd_med={_pct(row.get('monte_carlo_dd_median'))} "
+            f"folds+={row.get('folds_positive')}"
+        )
+        a(f"      reason: {row.get('reason')}")
+
+    a("")
+    a("# V5 COMPARISON")
+    v5 = payload.get("v5_comparison") or {}
+    a(f"  {v5}")
+    a(f"  genuine_improvement_vs_v5={payload.get('genuine_improvement_vs_v5')}")
+    a(f"  {payload.get('improvement_note')}")
+    a("")
     a("=" * 72)
     a(f"VERDICT: {payload.get('verdict')}")
     a(f"CODE:    {payload.get('verdict_code')}")
     a(f"PROMOTED: {payload.get('promoted_candidates')}")
     a(f"NEXT: {payload.get('next_stage')}")
+    a("Live scanner: NOT modified. Research/testing only.")
     a("=" * 72)
     return "\n".join(lines) + "\n"
 
