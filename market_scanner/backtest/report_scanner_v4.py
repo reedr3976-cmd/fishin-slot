@@ -430,13 +430,19 @@ def final_verdict(
         if fx_key in stage4:
             fx_gate = stage4[fx_key].get("oos_gate")
 
-    # If Stage 2 not run, still allow PASS only on diagnostic SC if it somehow passes all gates
-    if sc_gate is None and justified is False:
-        sc_block = attribution.get("stock_commodity")
-        if sc_block and sc_block.get("oos_gate", {}).get("all_pass"):
-            sc_gate = sc_block["oos_gate"]
-            sc_name = "V4_S1_STOCK_COMMODITY"
-            fx_gate = attribution.get("forex", {}).get("oos_gate")
+    # Stage-1 class slices of the a-priori V3_S2 rule (no retuning) may also qualify
+    if sc_gate is None or not sc_gate.get("all_pass"):
+        for key, label in (
+            ("stock", "V4_S1_STOCK"),
+            ("stock_commodity", "V4_S1_STOCK_COMMODITY"),
+            ("commodity", "V4_S1_COMMODITY"),
+        ):
+            block = attribution.get(key)
+            if block and block.get("oos_gate", {}).get("all_pass"):
+                sc_gate = block["oos_gate"]
+                sc_name = label
+                fx_gate = attribution.get("forex", {}).get("oos_gate")
+                break
 
     if sc_gate and sc_gate.get("all_pass"):
         fx_fail = not (fx_gate and fx_gate.get("positive_oos_expectancy"))
@@ -444,7 +450,7 @@ def final_verdict(
             return (
                 "PASS_SC_FX_SEPARATE",
                 "STOCK/COMMODITY CANDIDATE PASSES — FX REQUIRES SEPARATE RESEARCH. "
-                f"Candidate={sc_name}. Do NOT merge into live ORIGINAL.",
+                f"Candidate={sc_name}. Do NOT merge into live ORIGINAL; present for review only.",
                 sc_name,
             )
         return (
