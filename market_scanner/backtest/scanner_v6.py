@@ -73,6 +73,17 @@ def _feat(series: CandleSeries) -> dict:
     return feat
 
 
+# Cache causal features per series object id (research runs only)
+_FEAT_CACHE: dict[int, dict] = {}
+
+
+def _feat_cached(series: CandleSeries) -> dict:
+    key = id(series)
+    if key not in _FEAT_CACHE:
+        _FEAT_CACHE[key] = _feat(series)
+    return _FEAT_CACHE[key]
+
+
 def _ma_bull(feat: dict, i: int) -> bool:
     f, s, slope = feat["sma_fast"][i], feat["sma_slow"][i], feat["sma_slope"][i]
     if any(np.isnan(x) for x in (f, s, slope)):
