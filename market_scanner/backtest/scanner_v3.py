@@ -278,29 +278,44 @@ def _exit_policy(
     if policy == "adaptive_v2":
         return _adaptive_exit(series, feat, entry_idx, direction, entry, atr0)
 
-    # Initial structure stop reference
+    # Initial structure stop reference — must stay on the correct side of entry
     swing_hi, swing_lo = last_confirmed_swing(
         series.high, series.low, entry_idx, pivot=V3_STRUCT_PIVOT
     )
     if direction == "bullish":
         atr_stop = entry - stop_dist
-        struct_stop = (swing_lo - 1e-12) if swing_lo is not None else atr_stop
-        stop = atr_stop if policy.startswith("atr") or policy == "rr_target" else struct_stop
-        if policy == "structure_stop":
+        if swing_lo is not None and swing_lo < entry:
+            struct_stop = float(swing_lo)
+        else:
+            struct_stop = atr_stop
+        if policy in ("structure_stop", "structure_trail"):
             stop = struct_stop
-        target = entry + V3_RR_TARGET * (entry - stop) if policy == "rr_target" else None
+        else:
+            stop = atr_stop
+        risk = entry - stop
+        if risk <= 0:
+            stop = atr_stop
+            risk = stop_dist
+        target = entry + V3_RR_TARGET * risk if policy == "rr_target" else None
         extreme = entry
     else:
         atr_stop = entry + stop_dist
-        struct_stop = (swing_hi + 1e-12) if swing_hi is not None else atr_stop
-        stop = atr_stop if policy.startswith("atr") or policy == "rr_target" else struct_stop
-        if policy == "structure_stop":
+        if swing_hi is not None and swing_hi > entry:
+            struct_stop = float(swing_hi)
+        else:
+            struct_stop = atr_stop
+        if policy in ("structure_stop", "structure_trail"):
             stop = struct_stop
-        target = entry - V3_RR_TARGET * (stop - entry) if policy == "rr_target" else None
+        else:
+            stop = atr_stop
+        risk = stop - entry
+        if risk <= 0:
+            stop = atr_stop
+            risk = stop_dist
+        target = entry - V3_RR_TARGET * risk if policy == "rr_target" else None
         extreme = entry
 
-    # Ensure stop distance for risk unit reflects initial stop
-    init_stop_dist = abs(entry - stop) if stop != entry else stop_dist
+    init_stop_dist = float(risk)
 
     for j in range(entry_idx + 1, last + 1):
         hi = float(series.high[j])
@@ -314,7 +329,6 @@ def _exit_policy(
                 return j, stop, "atr_stop", init_stop_dist
             if direction == "bearish" and hi >= stop:
                 return j, stop, "atr_stop", init_stop_dist
-            # time stop at horizon if sooner than max hold for classic stop study
             if j >= entry_idx + horizon:
                 return j, float(series.close[j]), "time_stop", init_stop_dist
 
@@ -343,13 +357,13 @@ def _exit_policy(
             if direction == "bullish":
                 if lo <= stop:
                     return j, stop, "structure_trail_stop", init_stop_dist
-                if sl is not None:
-                    stop = max(stop, sl)
+                if sl is not None and sl < entry and sl > stop:
+                    stop = sl
             else:
                 if hi >= stop:
                     return j, stop, "structure_trail_stop", init_stop_dist
-                if sh is not None:
-                    stop = min(stop, sh)
+                if sh is not None and sh > entry and sh < stop:
+                    stop = sh
 
         elif policy == "rr_target":
             assert target is not None
