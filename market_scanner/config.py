@@ -23,6 +23,25 @@ INSTRUMENTS: dict[str, dict[str, str]] = {
     "XAUUSD": {"symbol": "GC=F", "asset_class": "commodity", "name": "Gold (COMEX)"},
     "XAGUSD": {"symbol": "SI=F", "asset_class": "commodity", "name": "Silver (COMEX)"},
     "USOIL": {"symbol": "CL=F", "asset_class": "commodity", "name": "Crude Oil WTI (NYMEX)"},
+    # V7 research-only commodities (excluded from live ENABLED universe)
+    "NATGAS": {
+        "symbol": "NG=F",
+        "asset_class": "commodity",
+        "name": "Natural Gas (NYMEX)",
+        "research_only": True,
+    },
+    "COPPER": {
+        "symbol": "HG=F",
+        "asset_class": "commodity",
+        "name": "Copper (COMEX)",
+        "research_only": True,
+    },
+    "CORN": {
+        "symbol": "ZC=F",
+        "asset_class": "commodity",
+        "name": "Corn (CBOT)",
+        "research_only": True,
+    },
     # Stocks / ETFs (catalog only — not in live ENABLED_ASSET_CLASSES)
     "SPY": {"symbol": "SPY", "asset_class": "stock", "name": "S&P 500 ETF"},
     "QQQ": {"symbol": "QQQ", "asset_class": "stock", "name": "Nasdaq 100 ETF"},
@@ -53,10 +72,18 @@ STUDY_ASSET_CLASSES: tuple[str, ...] = ("forex", "commodity", "stock")
 def active_instruments(
     asset_classes: tuple[str, ...] | list[str] | None = None,
 ) -> dict[str, dict[str, str]]:
-    """Return instruments in the active universe (crypto off by default)."""
+    """Return instruments in the active universe (crypto off by default).
+
+    Instruments marked research_only are never included in the live/active
+    universe even when their asset_class is enabled.
+    """
     classes = tuple(asset_classes) if asset_classes is not None else ENABLED_ASSET_CLASSES
     allowed = set(classes)
-    return {k: v for k, v in INSTRUMENTS.items() if v["asset_class"] in allowed}
+    return {
+        k: v
+        for k, v in INSTRUMENTS.items()
+        if v["asset_class"] in allowed and not v.get("research_only")
+    }
 
 
 def default_asset_classes() -> list[str]:
@@ -274,3 +301,43 @@ V6_COMMODITY_DISCOVERY: tuple[str, ...] = ("XAUUSD", "XAGUSD")
 V6_COMMODITY_HELDOUT: tuple[str, ...] = ("USOIL",)
 V6_FX_DISCOVERY: tuple[str, ...] = ("EURUSD", "GBPUSD", "USDJPY")
 V6_FX_HELDOUT: tuple[str, ...] = ("AUDUSD", "USDCAD", "USDCHF")
+
+# Scanner V7 — robustness research after V6 FAIL (research only; no live changes)
+SCANNER_V7_REPORT_TXT = "output/scanner_v7_report.txt"
+SCANNER_V7_REPORT_JSON = "output/scanner_v7_report.json"
+V7_TRAIN_FRACTION = 0.70
+V7_N_FOLDS = 4
+V7_MAX_DD_ACCEPT = 0.35
+V7_MIN_FOLDS_POSITIVE = 3
+V7_MIN_TRADES = 25
+V7_MIN_HELDOUT_TRADES = 15  # strengthen V6 caution into a hard gate
+V7_MIN_SYMBOLS_POSITIVE = 2
+V7_MC_RUNS = 200
+V7_MC_SEED = 11
+V7_ATR_STOP_MULT = 1.5
+V7_MAX_HOLD = 24
+V7_LOOKBACK = 20
+V7_VOL_ATR_MULT = 1.2
+V7_VOL_LOOKBACK = 5  # recent expansion window for pullback-after-expansion
+V7_ENTRY_SLIP_ATR = 0.05
+V7_ADX_MIN = 20.0
+# Discovery vs held-out (held-out NEVER used for family selection)
+V7_STOCK_DISCOVERY: tuple[str, ...] = ("SPY", "QQQ", "AAPL", "MSFT", "XOM")
+V7_STOCK_HELDOUT: tuple[str, ...] = (
+    "AMZN",
+    "GOOGL",
+    "META",
+    "NVDA",
+    "JPM",
+    "JNJ",
+    "WMT",
+    "BA",
+    "DIS",
+)
+# Pre-specified wider commodity panel to test cross-commodity vol behaviour
+# (discovery includes oil so concentration can be detected on TRAIN; held-out
+# is non-oil sectors). Research-only symbols never enter live ENABLED universe.
+V7_COMMODITY_DISCOVERY: tuple[str, ...] = ("XAUUSD", "XAGUSD", "USOIL")
+V7_COMMODITY_HELDOUT: tuple[str, ...] = ("NATGAS", "COPPER", "CORN")
+V7_FX_DISCOVERY: tuple[str, ...] = ("EURUSD", "GBPUSD", "USDJPY")
+V7_FX_HELDOUT: tuple[str, ...] = ("AUDUSD", "USDCAD", "USDCHF")
