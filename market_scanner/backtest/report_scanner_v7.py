@@ -413,10 +413,17 @@ def diagnose_v6_near_misses() -> dict[str, Any]:
     def pack(cls: str, fam_key: str) -> dict[str, Any]:
         fams = (v6.get("by_asset_class") or {}).get(cls, {}).get("families") or {}
         row = None
-        for name, r in fams.items():
-            if r.get("family_key") == fam_key or fam_key in name:
+        for _name, r in fams.items():
+            if r.get("family_key") == fam_key:
                 row = r
                 break
+        if row is None:
+            # Exact name fallback only (avoid substring traps like "C" in "CONFIRM")
+            target = f"V6_{fam_key}_"
+            for name, r in fams.items():
+                if name.startswith(target) or name == f"V6_{fam_key}":
+                    row = r
+                    break
         if not row:
             return {"found": False}
         te = row.get("test") or {}
@@ -457,21 +464,22 @@ def diagnose_v6_near_misses() -> dict[str, Any]:
 
     stocks_c["why_failed"] = (
         "Stocks C did not generalise because the discovery TEST edge was a thin-sample "
-        f"artifact (n={stocks_c.get('test_n')}, need ≥25): TRAIN expectancy was negative "
-        f"({stocks_c.get('train_expectancy')}), only fold "
-        f"{stocks_c.get('folds_positive')}/4 was positive and that positive fold coincides "
-        "with the OOS window (period lottery), and held-out stocks were negative "
+        f"artifact (test n={stocks_c.get('test_n')}, need ≥25): TRAIN expectancy was "
+        f"{stocks_c.get('train_expectancy')} (not a strong in-sample foundation), only "
+        f"{stocks_c.get('folds_positive')}/4 folds were positive and the sole positive fold "
+        "aligns with the late/OOS window (period lottery), while held-out stocks were negative "
         f"(exp={stocks_c.get('heldout_expectancy')}, n={stocks_c.get('heldout_n')}). "
-        "High PF/win-rate on 20 trades is insufficient evidence."
+        "High PF/win-rate on ~20 OOS trades is insufficient evidence of a real edge."
     )
     commodities_c["why_failed"] = (
         "Commodities C failed diversification, not headline expectancy: discovery TEST "
         f"best1_share={commodities_c.get('best1_share')} with PnL "
-        f"{commodities_c.get('pnl_contribution')} (gold-only positive contribution); "
-        f"held-out was oil-only with n={commodities_c.get('heldout_n')} "
-        f"(exp={commodities_c.get('heldout_expectancy')}) — too small and single-instrument "
-        "to prove vol-expansion works across commodities. V7 expands discovery to include "
-        "oil and holds out non-oil sectors (gas/copper/corn) under research_only symbols."
+        f"{commodities_c.get('pnl_contribution')} (single-symbol dominated positive "
+        "contribution); held-out was oil-only with "
+        f"n={commodities_c.get('heldout_n')} (exp={commodities_c.get('heldout_expectancy')}) "
+        "— too small and single-instrument to prove vol-expansion works across commodities. "
+        "V7 expands discovery to include oil and holds out non-oil sectors "
+        "(gas/copper/corn) under research_only symbols."
     )
     out["stocks_c"] = stocks_c
     out["commodities_c"] = commodities_c
