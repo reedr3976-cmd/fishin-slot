@@ -58,6 +58,31 @@ INSTRUMENTS: dict[str, dict[str, str]] = {
     "WMT": {"symbol": "WMT", "asset_class": "stock", "name": "Walmart"},
     "BA": {"symbol": "BA", "asset_class": "stock", "name": "Boeing"},
     "DIS": {"symbol": "DIS", "asset_class": "stock", "name": "Disney"},
+    # V9 research-only market-observed macro proxies (never live-scanned)
+    "DXY": {
+        "symbol": "DX-Y.NYB",
+        "asset_class": "macro",
+        "name": "US Dollar Index",
+        "research_only": True,
+    },
+    "US10Y": {
+        "symbol": "^TNX",
+        "asset_class": "macro",
+        "name": "US 10-Year Treasury Yield",
+        "research_only": True,
+    },
+    "US3M": {
+        "symbol": "^IRX",
+        "asset_class": "macro",
+        "name": "US 13-Week T-Bill Yield (short-rate proxy)",
+        "research_only": True,
+    },
+    "TIP": {
+        "symbol": "TIP",
+        "asset_class": "macro",
+        "name": "iShares TIPS Bond ETF (inflation-linked proxy)",
+        "research_only": True,
+    },
 }
 
 # Active scan universe: Forex + commodities only (crypto disabled by default).
@@ -183,6 +208,7 @@ ROUND_TRIP_COST: dict[str, float] = {
     "crypto": 0.0020,     # ~20 bps
     "commodity": 0.0010,  # ~10 bps
     "stock": 0.0010,      # ~10 bps (research catalog)
+    "macro": 0.0010,      # research proxies only — not traded live
 }
 
 BACKTEST_WARMUP_BARS = 60  # need SMA50 + buffer before first signal
@@ -393,3 +419,51 @@ V8_STOCK_ROTATIONS: tuple[tuple[str, ...], ...] = (
     ("AAPL", "MSFT", "XOM"),
     ("SPY", "QQQ", "JPM"),
 )
+
+# Scanner V9 — macroeconomic / event-layer research (research only; no live changes)
+SCANNER_V9_REPORT_TXT = "output/scanner_v9_report.txt"
+SCANNER_V9_REPORT_JSON = "output/scanner_v9_report.json"
+V9_TRAIN_END = V8_TRAIN_END
+V9_VAL_END = V8_VAL_END
+V9_N_FOLDS = V8_N_FOLDS
+V9_MAX_DD_ACCEPT = V8_MAX_DD_ACCEPT
+V9_MIN_FOLDS_POSITIVE = V8_MIN_FOLDS_POSITIVE
+V9_MIN_TRADES = V8_MIN_TRADES
+V9_MIN_HELDOUT_TRADES = V8_MIN_HELDOUT_TRADES
+V9_MIN_SYMBOLS_POSITIVE = V8_MIN_SYMBOLS_POSITIVE
+V9_MC_RUNS = V8_MC_RUNS
+V9_MC_SEED = 17
+V9_ATR_STOP_MULT = V8_ATR_STOP_MULT
+V9_MAX_HOLD = V8_MAX_HOLD
+V9_ENTRY_SLIP_ATR = V8_ENTRY_SLIP_ATR
+V9_MIN_ROTATION_POSITIVE = V8_MIN_ROTATION_POSITIVE
+# Pre-specified event windows (TRAIN selects among these; not tuned on VAL/FINAL)
+V9_EVENT_WINDOWS: tuple[dict, ...] = (
+    {"key": "none", "before_sec": 0, "after_sec": 0, "skip_event_bar": False},
+    {"key": "30m", "before_sec": 30 * 60, "after_sec": 30 * 60, "skip_event_bar": False},
+    {"key": "1h", "before_sec": 3600, "after_sec": 3600, "skip_event_bar": False},
+    {"key": "2h", "before_sec": 2 * 3600, "after_sec": 2 * 3600, "skip_event_bar": False},
+    {
+        "key": "4h_after",
+        "before_sec": 3600,
+        "after_sec": 4 * 3600,
+        "skip_event_bar": True,
+    },
+    {
+        "key": "calendar_day",
+        "before_sec": 0,
+        "after_sec": 0,
+        "skip_event_bar": False,
+        "calendar_day": True,
+    },
+)
+V9_STOCK_DEV = V8_STOCK_DEV
+V9_STOCK_FINAL_INST = V8_STOCK_FINAL_INST
+V9_STOCK_ROTATIONS = V8_STOCK_ROTATIONS
+V9_COMM_DEV = V8_COMM_DEV
+V9_COMM_FINAL_INST = V8_COMM_FINAL_INST
+V9_METALS_DEV = V8_METALS_DEV
+V9_METALS_FINAL_INST = V8_METALS_FINAL_INST
+V9_FX_DEV = V8_FX_DEV
+V9_FX_FINAL_INST = V8_FX_FINAL_INST
+V9_MACRO_KEYS: tuple[str, ...] = ("DXY", "US10Y", "US3M", "TIP")
