@@ -399,6 +399,7 @@ def build_v9_payload(series_4h: dict, daily_map: dict, bundle: dict[str, Any], c
         else "V9 FAIL — no candidate has demonstrated sufficient evidence of a generalisable edge"
     )
     events = bundle.get("events") or []
+    high_events = [e.to_dict() for e in events if getattr(e, "importance", "") == "HIGH"][:40]
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "purpose": "V9 macro/event-layer research after V8 FAIL; live ORIGINAL untouched",
