@@ -199,6 +199,13 @@ def _signal_component(ctx: V11Context, feat: dict, series: CandleSeries, i: int,
             return "bearish"
         return None
 
+    if comp == "FVG_SWEEP_HTF":
+        if ctx.fvg_after_sweep_bull[i] and int(ctx.daily_class[i]) == 1:
+            return "bullish"
+        if ctx.fvg_after_sweep_bear[i] and int(ctx.daily_class[i]) == -1:
+            return "bearish"
+        return None
+
     if comp == "FVG_BOS":
         if ctx.fvg_after_bos_bull[i]:
             return "bullish"
