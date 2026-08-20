@@ -6,3 +6,4 @@
 #   pip install -r requirements.txt
 numpy>=1.26
 requests>=2.31
+dukascopy-python>=4.0.1

@@ -30,6 +30,10 @@ class TradeResult:
     win: bool
     feature_flags: dict[str, int] | None = None
     rules_name: str = "original"
+    # Optional analysis fields (Scanner V2 / exit studies) — unused by live scanner
+    atr_at_entry: float | None = None
+    exit_reason: str = "fixed_hold"
+    r_multiple: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

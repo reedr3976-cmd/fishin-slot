@@ -232,6 +232,7 @@ def _synthetic_series(instrument_key: str, timeframe: str, n: int = 200) -> Cand
         "forex": 1.10,
         "crypto": 50_000.0 if instrument_key.startswith("BTC") else 2_000.0,
         "commodity": 2_000.0 if "XAU" in instrument_key else 70.0,
+        "macro": 100.0,
     }.get(meta["asset_class"], 100.0)
     if instrument_key == "USDJPY":
         base = 150.0
