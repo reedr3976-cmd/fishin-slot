@@ -369,12 +369,13 @@ def _perturbation_battery(series_4h, daily_map, weekly_map, macro, instruments) 
         setattr(m, a, ov)
     clear_v11_cache()
 
-    # Stop-distance perturbations — reuse baseline context (signal unchanged)
-    stop_orig = sv11.V11_ATR_STOP_MULT
+    # Stop-distance perturbations — patch V2_ATR_STOP_MULT (_adaptive_exit reads this)
+    import backtest.scanner_v2 as sv2
+
+    stop_orig = sv2.V2_ATR_STOP_MULT
     for value in (1.25, 1.75):
         print(f"    perturb stop_atr_mult={value}...", flush=True)
-        sv11.V11_ATR_STOP_MULT = value
-        # Must not reuse ctx for stop changes? Signals identical — reuse baseline_ctx
+        sv2.V2_ATR_STOP_MULT = value
         trades = run_spec_on_map(
             series_4h,
             FROZEN_E3_SPEC,
@@ -386,8 +387,6 @@ def _perturbation_battery(series_4h, daily_map, weekly_map, macro, instruments) 
             start_frac=0.0,
             end_frac=1.0,
         )
-        # Re-simulate exits with new stop mult by clearing nothing but forcing backtest
-        # backtest_spec reads V11_ATR_STOP_MULT at call time — OK
         exp = _exp(trades)
         results.append(
             {
@@ -399,7 +398,7 @@ def _perturbation_battery(series_4h, daily_map, weekly_map, macro, instruments) 
                 "collapsed": bool(base_exp is not None and base_exp > 0 and (exp is None or exp <= 0)),
             }
         )
-    sv11.V11_ATR_STOP_MULT = stop_orig
+    sv2.V2_ATR_STOP_MULT = stop_orig
 
     return {
         "frozen_baseline_expectancy": base_exp,
@@ -407,7 +406,10 @@ def _perturbation_battery(series_4h, daily_map, weekly_map, macro, instruments) 
         "diagnostic_universe": diag_inst,
         "rows": results,
         "any_collapse": any(r.get("collapsed") for r in results),
-        "note": "Diagnostic only on DEV universe. Frozen E3 remains the candidate regardless.",
+        "note": (
+            "Diagnostic only on DEV subset. Stop perturbations patch V2_ATR_STOP_MULT "
+            "(used by _adaptive_exit). Frozen E3 remains the candidate regardless."
+        ),
     }
 
 

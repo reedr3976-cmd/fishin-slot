@@ -1,0 +1,340 @@
+========================================================================
+SCANNER V13 — FROZEN E3 CONFIRMATION RESEARCH (NO OPTIMISATION)
+========================================================================
+Generated: 2026-08-21T01:13:39.837654+00:00
+Verdict: V13 FAIL (V13_FAIL)
+Spec version: E3-20e2618beb0a hash=20e2618beb0af6b1564814883ae77b584fd2df6c03602be1e32909e3fed6e1ad
+Git commit: d03cc6871c0fc3f7825464d2fc8dcec9bbc60616
+
+# FAIL REASONS
+  - Daily HTF look-ahead leakage detected (same-day OHLC available mid-day)
+  - Earliest-era expectancy non-positive (exp=-0.0005619995919159677, n=103)
+
+# PHASE 1 — FROZEN SPEC
+{
+  "candidate_id": "V12_FROZEN_FVG_SWEEP_HTF",
+  "v13_name": "V13_FROZEN_E3_FVG_SWEEP_HTF",
+  "origin": "V12 follow-up E3 (pre-registered); NOT V11_S_FVG_SWEEP",
+  "primary_timeframe": "4H",
+  "component": "FVG_SWEEP_HTF",
+  "market_class": "stocks",
+  "liquidity_sweep": {
+    "definition": "Causal wick beyond last confirmed swing high/low then close back inside. Bullish: low < swing_low AND close > swing_low AND close >= open. Bearish: high > swing_high AND close < swing_high AND close <= open.",
+    "pivot": 2,
+    "source": "market_context.ContextArrays.liq_sweep_*"
+  },
+  "fvg": {
+    "definition": "Strict 3-candle FVG at bar i: bullish if low[i] > high[i-2]; bearish if high[i] < low[i-2]. Mitigation tracked forward only.",
+    "active": "fresh OR partial (partial touch of zone without full mitigation)",
+    "max_age_bars_4h": 30,
+    "proximity_filter_atr": 1.5
+  },
+  "sweep_fvg_sequence": "Entry bar i when (fresh OR partial FVG active at i) AND liquidity sweep occurred within bars i-0..i-3 (fvg_after_sweep_*).",
+  "daily_htf_alignment": {
+    "definition": "Completed Daily structure class at 4H timestamp t via _htf_class: swing_structure_dir on daily bars with pivot=2 AND ADX(14) >= ADX_WEAK. Bullish E3 requires daily_class==1; bearish requires daily_class==-1.",
+    "adx_weak": 18.0,
+    "adx_strong": 25.0,
+    "lookup": "np.searchsorted(daily.timestamps, t, side='right') - 1",
+    "note": "V13 causal audit verifies whether incomplete current-day OHLC leaks."
+  },
+  "entry_timing": "Signal bar close (4H close). Adverse entry slippage only in stress tests.",
+  "signal_timestamp": "series.timestamps[i] at the 4H signal bar",
+  "stop": {
+    "mode": "adaptive ATR (_adaptive_exit)",
+    "initial_stop_atr_mult": 1.5,
+    "structure_break_exit": true,
+    "trail_after_1R": true,
+    "trail_uses_confirmed_swing": true
+  },
+  "exit_target": {
+    "exit_mode": "atr (default adaptive \u2014 not r2/partial)",
+    "max_hold_bars_4h": 24,
+    "reasons": [
+      "atr_stop",
+      "structure_break",
+      "max_hold"
+    ]
+  },
+  "transaction_costs": {
+    "stock_round_trip": 0.001,
+    "applied": "once per trade (entry+exit proxy)",
+    "stress_multiples": [
+      1.0,
+      1.5,
+      2.0,
+      3.0
+    ]
+  },
+  "slippage": {
+    "baseline_entry_slip_atr": 0.0,
+    "stress_entry_slip_atr": 0.05
+  },
+  "universe": {
+    "dev": [
+      "SPY",
+      "QQQ",
+      "AAPL",
+      "MSFT",
+      "XOM",
+      "AMZN",
+      "GOOGL",
+      "META",
+      "JPM"
+    ],
+    "final_inst": [
+      "NVDA",
+      "JNJ",
+      "WMT",
+      "BA",
+      "DIS"
+    ],
+    "instrument_type": "Dukascopy US equity/ETF CFDs (bid), not cash equities"
+  },
+  "tuning_policy": "FROZEN for V13. Perturbations are diagnostic only; never replace candidate.",
+  "code_refs": {
+    "signal": "scanner_v11._signal_component FVG_SWEEP_HTF",
+    "context": "market_context_v11.build_v11_context / fvg_after_sweep_* / daily_class",
+    "exit": "scanner_v2._adaptive_exit via scanner_v11._exit_for_mode(mode='atr')"
+  }
+}
+
+# PHASE 2 — DATA-SOURCE INDEPENDENCE
+  Yahoo overlap Dukascopy-era metrics: n=177 exp=  +8.20bp
+  Yahoo feed metrics: n=None exp=n/a
+  Sign agreement: None
+  Long independent history: {
+  "available_without_key": false,
+  "blocked_options": [
+    {
+      "name": "HF Data Library",
+      "requires": "free account + email verification + API key",
+      "why": "Best free multi-year US equity/ETF 1-min history for like-for-like E3 instruments",
+      "url": "https://hfdatalibrary.com/"
+    },
+    {
+      "name": "EODHD Intraday",
+      "requires": "API key; freemium/paid tiers",
+      "url": "https://eodhd.com/"
+    },
+    {
+      "name": "Polygon / Norgate / Bloomberg",
+      "requires": "paid subscription"
+    }
+  ],
+  "policy": "NOT integrated. STOP \u2014 awaiting user approval before any registration/API key/purchase.",
+  "free_no_key_probe": "No usable free no-key multi-year US equity 1h feed found for E3 universe (Stooq/AV demo unusable)."
+}
+
+# PHASE 3 — PRE-YAHOO CONFIRMATION (CRITICAL)
+  n=374 win= 47.06% exp=  +6.54bp PF= 1.19 DD= 13.75% streak=9 avg_win= +86.13bp avg_loss= -64.20bp
+  long_short: {'bullish': {'n': 228, 'win_rate': 0.5043859649122807, 'expectancy': 0.001217762916190951, 'max_drawdown': 0.08407883897009549, 'profit_factor': 1.3479607116191732}, 'bearish': {'n': 146, 'win_rate': 0.4178082191780822, 'expectancy': -0.00022611467797249384, 'max_drawdown': 0.11863421096346927, 'profit_factor': 0.9302438322758682}}
+  regime: {'range': {'n': 253, 'expectancy': 0.0010368154900224963, 'win_rate': 0.4743083003952569}, 'strong_trend_bear': {'n': 14, 'expectancy': 0.000165189660349524, 'win_rate': 0.35714285714285715}, 'strong_trend_bull': {'n': 33, 'expectancy': 0.002684024533975404, 'win_rate': 0.5454545454545454}, 'volatility_contraction': {'n': 24, 'expectancy': -0.003221496472372683, 'win_rate': 0.375}, 'volatility_expansion': {'n': 41, 'expectancy': -0.0005746679611078199, 'win_rate': 0.4878048780487805}, 'weak_trend_bear': {'n': 4, 'expectancy': -0.0014970154103427103, 'win_rate': 0.5}, 'weak_trend_bull': {'n': 5, 'expectancy': -0.0003394437100969417, 'win_rate': 0.4}}
+  year_breakdown: [{'year': 2017, 'n': 33, 'expectancy': -0.0022078215163996964, 'win_rate': 0.24242424242424243, 'profit_factor': 0.2865985053657427, 'max_drawdown': 0.07194030115664096, 'max_losing_streak': 8, 'avg_win': 0.0036587085951304017, 'avg_loss': -0.004085111152089327}, {'year': 2018, 'n': 61, 'expectancy': -0.00030264119822045435, 'win_rate': 0.4098360655737705, 'profit_factor': 0.920337543565695, 'max_drawdown': 0.09310663073270586, 'max_losing_streak': 9, 'avg_win': 0.008531223481958748, 'avg_loss': -0.006437269448344901}, {'year': 2019, 'n': 60, 'expectancy': 0.001776015231157184, 'win_rate': 0.5166666666666667, 'profit_factor': 1.5246872692737783, 'max_drawdown': 0.05196861672926043, 'max_losing_streak': 6, 'avg_win': 0.009988872960445342, 'avg_loss': -0.007003246479461191}, {'year': 2020, 'n': 54, 'expectancy': 0.0017441917919077648, 'win_rate': 0.5740740740740741, 'profit_factor': 1.5898734852118608, 'max_drawdown': 0.05391046221031847, 'max_losing_streak': 4, 'avg_win': 0.008188983495850349, 'avg_loss': -0.0069422665916670226}, {'year': 2021, 'n': 50, 'expectancy': 0.0011924743347085226, 'win_rate': 0.52, 'profit_factor': 1.34094408484956, 'max_drawdown': 0.057389247616262705, 'max_losing_streak': 5, 'avg_win': 0.009019307747327303, 'avg_loss': -0.007286595195628489}, {'year': 2022, 'n': 64, 'expectancy': 0.0015899532864363033, 'win_rate': 0.5, 'profit_factor': 1.4917162365831382, 'max_drawdown': 0.03689431029455205, 'max_losing_streak': 4, 'avg_win': 0.009646861162310809, 'avg_loss': -0.006466954589438202}, {'year': 2023, 'n': 52, 'expectancy': -0.0005032994742232586, 'win_rate': 0.4423076923076923, 'profit_factor': 0.8642111622014238, 'max_drawdown': 0.08111099904966146, 'max_losing_streak': 5, 'avg_win': 0.007241987726481232, 'avg_loss': -0.00664611346098889}]
+  instruments: [{'instrument': 'QQQ', 'n': 25, 'expectancy': 0.005096509353360462, 'win_rate': 0.6, 'profit_factor': 3.251979994091409, 'max_drawdown': 0.02942743272674564, 'total_pnl': 0.12741273383401155, 'pnl_share': 0.5208232142965742}, {'instrument': 'META', 'n': 27, 'expectancy': 0.003019792610573913, 'win_rate': 0.48148148148148145, 'profit_factor': 2.019389160298764, 'max_drawdown': 0.02878485647294019, 'total_pnl': 0.08153440048549564, 'pnl_share': 0.3332870056137543}, {'instrument': 'AAPL', 'n': 36, 'expectancy': 0.002253581601380481, 'win_rate': 0.4444444444444444, 'profit_factor': 1.6416136340937681, 'max_drawdown': 0.02377098197338288, 'total_pnl': 0.08112893764969732, 'pnl_share': 0.3316296009645974}, {'instrument': 'MSFT', 'n': 22, 'expectancy': 0.0019703066536580615, 'win_rate': 0.5, 'profit_factor': 1.5192976920275598, 'max_drawdown': 0.032016554387457354, 'total_pnl': 0.04334674638047735, 'pnl_share': 0.17718787675170478}, {'instrument': 'SPY', 'n': 27, 'expectancy': 0.0010923452576338008, 'win_rate': 0.48148148148148145, 'profit_factor': 1.4076038116816942, 'max_drawdown': 0.022195796398891247, 'total_pnl': 0.029493321956112623, 'pnl_share': 0.12055943137895285}, {'instrument': 'JPM', 'n': 30, 'expectancy': 0.0004094918655619332, 'win_rate': 0.6, 'profit_factor': 1.1571776402407423, 'max_drawdown': 0.028075119378317567, 'total_pnl': 0.012284755966857991, 'pnl_share': 0.05021622169918519}, {'instrument': 'DIS', 'n': 37, 'expectancy': 0.0002083539815553647, 'win_rate': 0.5135135135135135, 'profit_factor': 1.0675217673351487, 'max_drawdown': 0.033503814613255224, 'total_pnl': 0.007709097317548501, 'pnl_share': 0.03151236711929749}, {'instrument': 'XOM', 'n': 23, 'expectancy': -0.00023949399028823446, 'win_rate': 0.5652173913043478, 'profit_factor': 0.9272883066217198, 'max_drawdown': 0.046182203439936904, 'total_pnl': -0.005508361776629386, 'pnl_share': -0.022516451846563274}, {'instrument': 'BA', 'n': 20, 'expectancy': -0.00028718285874037, 'win_rate': 0.45, 'profit_factor': 0.925899586701095, 'max_drawdown': 0.024992253167767545, 'total_pnl': -0.0057436571748074, 'pnl_share': -0.0234782654887375}, {'instrument': 'GOOGL', 'n': 23, 'expectancy': -0.0003253894587928091, 'win_rate': 0.391304347826087, 'profit_factor': 0.9159636219679497, 'max_drawdown': 0.02823751615783892, 'total_pnl': -0.00748395755223461, 'pnl_share': -0.030592066512691585}, {'instrument': 'WMT', 'n': 29, 'expectancy': -0.0004917583798060729, 'win_rate': 0.41379310344827586, 'profit_factor': 0.8617262585655204, 'max_drawdown': 0.0667623816924893, 'total_pnl': -0.014260993014376127, 'pnl_share': -0.05829445768336288}, {'instrument': 'JNJ', 'n': 16, 'expectancy': -0.001543922767611061, 'win_rate': 0.25, 'profit_factor': 0.7096358453288978, 'max_drawdown': 0.04294543491960656, 'total_pnl': -0.024702764281776975, 'pnl_share': -0.10097713712042884}, {'instrument': 'NVDA', 'n': 32, 'expectancy': -0.001251400695001431, 'win_rate': 0.4375, 'profit_factor': 0.7158241900489787, 'max_drawdown': 0.0612577260263948, 'total_pnl': -0.04004482224004579, 'pnl_share': -0.16369064855139473}, {'instrument': 'AMZN', 'n': 27, 'expectancy': -0.0015010457645473348, 'win_rate': 0.37037037037037035, 'profit_factor': 0.5424468137778485, 'max_drawdown': 0.06341296010116056, 'total_pnl': -0.04052823564277805, 'pnl_share': -0.16566669062088726}]
+  POST-Yahoo: n=177 exp=  +8.20bp win= 48.02% PF= 1.25
+
+# PHASE 4 — ERA STABILITY
+  earliest         2017-02-16→2019-05-03 n=103 exp=  -5.62bp win= 34.95% PF= 0.84 DD= 13.75%
+  middle           2019-05-03→2021-07-17 n=131 exp= +13.96bp win= 56.49% PF= 1.41 DD=  5.74%
+  late_pre_yahoo   2021-07-17→2023-10-01 n=140 exp=  +8.54bp win= 47.14% PF= 1.26 DD=  8.11%
+  pre_oct_2023     2017-02-16→2023-10-01 n=374 exp=  +6.54bp win= 47.06% PF= 1.19 DD= 13.75%
+  oct_2023_onward  2023-10-01→2026-08-19 n=177 exp=  +8.20bp win= 48.02% PF= 1.25 DD=  9.51%
+
+# PHASE 5 — INSTRUMENT ROBUSTNESS
+  concentration: {'best1_share_of_positive_pnl': 0.2894585814570974, 'best2_share_of_positive_pnl': 0.45637654105411235, 'best3_share_of_positive_pnl': 0.6218682248978928, 'ranked_positive': [{'instrument': 'QQQ', 'pnl': 0.16246640173291665}, {'instrument': 'MSFT', 'pnl': 0.09368718710571998}, {'instrument': 'SPY', 'pnl': 0.09288665153914451}, {'instrument': 'META', 'pnl': 0.08069085424306235}, {'instrument': 'AAPL', 'pnl': 0.052159806293709136}, {'instrument': 'JPM', 'pnl': 0.021897494035421013}, {'instrument': 'JNJ', 'pnl': 0.01817390400511589}, {'instrument': 'WMT', 'pnl': 0.016016387577986717}, {'instrument': 'NVDA', 'pnl': 0.010590210383547266}, {'instrument': 'DIS', 'pnl': 0.006812747794761924}, {'instrument': 'XOM', 'pnl': 0.005895208491866006}], 'instruments_positive': 11, 'instruments_total': 14}
+  instruments: [{'instrument': 'QQQ', 'n': 36, 'expectancy': 0.00451295560369213, 'win_rate': 0.5833333333333334, 'profit_factor': 2.8603126513916304, 'max_drawdown': 0.02942743272674564, 'total_pnl': 0.16246640173291665, 'pnl_share': 0.41674980974738096}, {'instrument': 'MSFT', 'n': 32, 'expectancy': 0.0029277245970537494, 'win_rate': 0.5625, 'profit_factor': 1.9759803059962089, 'max_drawdown': 0.032016554387457354, 'total_pnl': 0.09368718710571997, 'pnl_share': 0.2403211801678347}, {'instrument': 'SPY', 'n': 37, 'expectancy': 0.0025104500415985003, 'win_rate': 0.5135135135135135, 'profit_factor': 2.0998260990383493, 'max_drawdown': 0.022195796398891247, 'total_pnl': 0.09288665153914451, 'pnl_share': 0.2382676906985795}, {'instrument': 'META', 'n': 37, 'expectancy': 0.002180833898461146, 'win_rate': 0.4594594594594595, 'profit_factor': 1.6998795251210528, 'max_drawdown': 0.02878485647294019, 'total_pnl': 0.08069085424306235, 'pnl_share': 0.20698370737250515}, {'instrument': 'AAPL', 'n': 49, 'expectancy': 0.001064485842728758, 'win_rate': 0.42857142857142855, 'profit_factor': 1.283738147574516, 'max_drawdown': 0.04632597606901995, 'total_pnl': 0.052159806293709136, 'pnl_share': 0.1337974443792914}, {'instrument': 'JPM', 'n': 42, 'expectancy': 0.0005213689056052626, 'win_rate': 0.5476190476190477, 'profit_factor': 1.1688054102084973, 'max_drawdown': 0.031341546176516626, 'total_pnl': 0.021897494035421013, 'pnl_share': 0.05617023812842394}, {'instrument': 'JNJ', 'n': 28, 'expectancy': 0.0006490680001827104, 'win_rate': 0.35714285714285715, 'profit_factor': 1.1633339960956504, 'max_drawdown': 0.04294543491960656, 'total_pnl': 0.01817390400511589, 'pnl_share': 0.04661869134610545}, {'instrument': 'WMT', 'n': 42, 'expectancy': 0.0003813425613806365, 'win_rate': 0.42857142857142855, 'profit_factor': 1.1046855012714187, 'max_drawdown': 0.0667623816924893, 'total_pnl': 0.016016387577986717, 'pnl_share': 0.041084349777988104}, {'instrument': 'NVDA', 'n': 41, 'expectancy': 0.00025829781423286033, 'win_rate': 0.5121951219512195, 'profit_factor': 1.065746474076482, 'max_drawdown': 0.0612577260263948, 'total_pnl': 0.010590210383547266, 'pnl_share': 0.027165420760555115}, {'instrument': 'DIS', 'n': 53, 'expectancy': 0.00012854241122192296, 'win_rate': 0.5094339622641509, 'profit_factor': 1.0404402322558413, 'max_drawdown': 0.047193087073830076, 'total_pnl': 0.006812747794761924, 'pnl_share': 0.017475683076870165}, {'instrument': 'XOM', 'n': 37, 'expectancy': 0.0001593299592396219, 'win_rate': 0.5675675675675675, 'profit_factor': 1.0491447783109078, 'max_drawdown': 0.05420084453158706, 'total_pnl': 0.005895208491866006, 'pnl_share': 0.01512206210761751}, {'instrument': 'BA', 'n': 38, 'expectancy': -0.0005201717044853918, 'win_rate': 0.47368421052631576, 'profit_factor': 0.8484396151694534, 'max_drawdown': 0.03336385542755193, 'total_pnl': -0.01976652477044489, 'pnl_share': -0.050703993869403184}, {'instrument': 'GOOGL', 'n': 37, 'expectancy': -0.0008515969308530467, 'win_rate': 0.43243243243243246, 'profit_factor': 0.7657655398123712, 'max_drawdown': 0.05328646293544745, 'total_pnl': -0.03150908644156273, 'pnl_share': -0.08082536228888824}, {'instrument': 'AMZN', 'n': 42, 'expectancy': -0.00286094447959287, 'win_rate': 0.2619047619047619, 'profit_factor': 0.29173107749005767, 'max_drawdown': 0.1190310734614815, 'total_pnl': -0.12015966814290052, 'pnl_share': -0.3082269214048607}]
+  LOO: [{'held_out': 'AAPL', 'n': 502, 'expectancy': 0.0006726728437343311, 'positive': True}, {'held_out': 'AMZN', 'n': 509, 'expectancy': 0.0010019670766036226, 'positive': True}, {'held_out': 'BA', 'n': 513, 'expectancy': 0.0007984563325902305, 'positive': True}, {'held_out': 'DIS', 'n': 498, 'expectancy': 0.0007691341888626134, 'positive': True}, {'held_out': 'GOOGL', 'n': 514, 'expectancy': 0.0008197483663227745, 'positive': True}, {'held_out': 'JNJ', 'n': 523, 'expectancy': 0.0007106456402356166, 'positive': True}, {'held_out': 'JPM', 'n': 509, 'expectancy': 0.0007228763847012226, 'positive': True}, {'held_out': 'META', 'n': 514, 'expectancy': 0.000601460543979146, 'positive': True}, {'held_out': 'MSFT', 'n': 519, 'expectancy': 0.0005706250226254786, 'positive': True}, {'held_out': 'NVDA', 'n': 510, 'expectancy': 0.0007436301244407767, 'positive': True}, {'held_out': 'QQQ', 'n': 515, 'expectancy': 0.0004415051885736441, 'positive': True}, {'held_out': 'SPY', 'n': 514, 'expectancy': 0.0005777333118856009, 'positive': True}, {'held_out': 'WMT', 'n': 509, 'expectancy': 0.0007344306213563, 'positive': True}, {'held_out': 'XOM', 'n': 514, 'expectancy': 0.0007469773645067653, 'positive': True}]
+
+# PHASE 6 — PARAMETER FRAGILITY (diagnostic)
+{
+  "frozen_baseline_expectancy": 0.0018198705477921937,
+  "frozen_baseline_n": 196,
+  "diagnostic_universe": [
+    "SPY",
+    "QQQ",
+    "AAPL",
+    "GOOGL",
+    "META"
+  ],
+  "rows": [
+    {
+      "perturbation": "htf_adx_weak=15.0",
+      "n": 230,
+      "expectancy": 0.0017000466736354393,
+      "delta_vs_frozen": -0.00011982387415675438,
+      "positive": true,
+      "collapsed": false
+    },
+    {
+      "perturbation": "htf_adx_weak=21.0",
+      "n": 157,
+      "expectancy": 0.0013295657793986166,
+      "delta_vs_frozen": -0.0004903047683935771,
+      "positive": true,
+      "collapsed": false
+    },
+    {
+      "perturbation": "pivot=1",
+      "n": 182,
+      "expectancy": 0.0011659186560481196,
+      "delta_vs_frozen": -0.000653951891744074,
+      "positive": true,
+      "collapsed": false
+    },
+    {
+      "perturbation": "fvg_max_age=20",
+      "n": 180,
+      "expectancy": 0.0016992352509804898,
+      "delta_vs_frozen": -0.00012063529681170392,
+      "positive": true,
+      "collapsed": false
+    },
+    {
+      "perturbation": "stop_atr_mult=1.25",
+      "n": 202,
+      "expectancy": 0.0014472407235298313,
+      "delta_vs_frozen": -0.00037262982426236233,
+      "positive": true,
+      "collapsed": false,
+      "note": "Corrected: patches V2_ATR_STOP_MULT used by _adaptive_exit"
+    },
+    {
+      "perturbation": "stop_atr_mult=1.75",
+      "n": 194,
+      "expectancy": 0.001557621994829914,
+      "delta_vs_frozen": -0.0002622485529622798,
+      "positive": true,
+      "collapsed": false,
+      "note": "Corrected: patches V2_ATR_STOP_MULT used by _adaptive_exit"
+    }
+  ],
+  "any_collapse": false,
+  "note": "Diagnostic only on DEV subset. Stop perturbations patch V2_ATR_STOP_MULT (used by _adaptive_exit). Frozen E3 remains the candidate regardless."
+}
+
+# PHASE 7 — COST / SLIPPAGE STRESS
+  cost×1.0: n=551 exp=  +7.08bp pre=  +6.54bp post=  +8.20bp
+  cost×1.5: n=551 exp=  +4.19bp pre=  +3.64bp post=  +5.36bp
+  cost×2.0: n=551 exp=  +1.31bp pre=  +0.74bp post=  +2.52bp
+  cost×3.0: n=551 exp=  -4.45bp pre=  -5.07bp post=  -3.15bp
+  entry slip 0.05×ATR: n=552 exp=  +4.15bp
+  approx breakeven cost_mult: 3.0
+
+# PHASE 8 — STATISTICS
+  bootstrap_all: {'n_boot': 1000, 'expectancy_mean': 0.0007206127889390641, 'ci95_low': -0.00011139032802920715, 'ci95_high': 0.001536991188419305, 'pct_positive': 0.957, 'note': 'Bootstrap resamples trade returns with replacement; not a proof of edge.'}
+  bootstrap_pre_yahoo: {'n_boot': 1000, 'expectancy_mean': 0.0006739958410825064, 'ci95_low': -0.00034898132296155913, 'ci95_high': 0.00173740032937902, 'pct_positive': 0.892, 'note': 'Bootstrap resamples trade returns with replacement; not a proof of edge.'}
+  monte_carlo_val: {'n_runs': 200, 'paths_per_run': 2, 'max_drawdown': {'median': 0.05911850187381103, 'p90': 0.09441226320951446, 'p95': 0.11052534803027629}, 'total_return': {'median': 0.06306212130091837, 'p10': -0.02174281836356248, 'p5': -0.04930845456134155}, 'longest_losing_streak': {'median': 5.0, 'p90': 7.100000000000023, 'p95': 8.0}}
+
+# PHASE 9 — TEMPORAL ROBUSTNESS
+  longest_pos_years=4 longest_neg_years=2 max_underwater_trades=152
+  best_roll12= +34.23bp worst_roll12= -25.24bp
+
+# PHASE 10 — CAUSAL / LOOK-AHEAD AUDIT
+{
+  "htf_look_ahead": {
+    "test": "daily_htf_same_day_ohlc_leak",
+    "look_ahead_detected": true,
+    "sample_leaks": [
+      {
+        "bar_idx": 0,
+        "day": 18518,
+        "mid_close": 100.05,
+        "daily_full_close": 100.14999999999999,
+        "day_end_4h_close": 100.14999999999999,
+        "causal_daily_close": 100.05,
+        "htf_class_full_daily": 0,
+        "htf_class_causal_daily": 0,
+        "class_mismatch": false
+      },
+      {
+        "bar_idx": 1,
+        "day": 18518,
+        "mid_close": 100.1,
+        "daily_full_close": 100.14999999999999,
+        "day_end_4h_close": 100.14999999999999,
+        "causal_daily_close": 100.1,
+        "htf_class_full_daily": 0,
+        "htf_class_causal_daily": 0,
+        "class_mismatch": false
+      },
+      {
+        "bar_idx": 3,
+        "day": 18519,
+        "mid_close": 100.19999999999999,
+        "daily_full_close": 100.20999999999998,
+        "day_end_4h_close": 100.20999999999998,
+        "causal_daily_close": 100.19999999999999,
+        "htf_class_full_daily": 0,
+        "htf_class_causal_daily": 0,
+        "class_mismatch": false
+      },
+      {
+        "bar_idx": 4,
+        "day": 18519,
+        "mid_close": 100.24999999999999,
+        "daily_full_close": 100.20999999999998,
+        "day_end_4h_close": 100.20999999999998,
+        "causal_daily_close": 100.24999999999999,
+        "htf_class_full_daily": 0,
+        "htf_class_causal_daily": 0,
+        "class_mismatch": false
+      },
+      {
+        "bar_idx": 5,
+        "day": 18519,
+        "mid_close": 100.29999999999998,
+        "daily_full_close": 100.20999999999998,
+        "day_end_4h_close": 100.20999999999998,
+        "causal_daily_close": 100.29999999999998,
+        "htf_class_full_daily": 0,
+        "htf_class_causal_daily": 0,
+        "class_mismatch": false
+      }
+    ],
+    "n_leak_examples": 5,
+    "n_class_mismatches_in_samples": 0,
+    "mechanism": "aggregate_daily() builds full-day OHLC from all 4H bars of the UTC day; _htf_class(daily, t) selects that day's bar when t is mid-day, so high/low/close (and thus ADX/swing structure) can incorporate later 4H bars of the same day.",
+    "passthrough_requirement": "At 4H timestamp t, Daily HTF must use only fully completed days before t (exclude the in-progress UTC day).",
+    "pass": false,
+    "mid_day_htf_classes": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "end_of_day_htf_class": 0,
+    "ctx_mid_day_classes": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "ctx_end_of_day_class": 0,
+    "classification_leak_synthetic": false,
+    "real_sample_mechanical": {
+      "n_leak_examples": 5,
+      "sample_leaks": [
+        {
+          "bar_idx": 0,
+          "day": 17213,
+          "mid_close": 234.3,
+          "daily_full_close": 234.726,
+          "day_end_4h_close": 234.726,
+          "causal_daily_close": 234.3,
+          "htf_class_full_daily": 0,
+          "htf_class_causal_daily": 0,
+          "class_mismatch": false
+        },
+       
+
+# NESTED SPLITS (continuity with V12)
+  train       n=186 exp= +13.71bp win= 47.31%
+  val         n=72 exp=  +8.96bp win= 50.00%
+  final_time  n=91 exp=  +4.23bp win= 47.25%
+  final_inst  n=101 exp=  +3.23bp win= 46.53%
+  gate: {'positive_val_oos': True, 'positive_final_time': True, 'positive_final_inst': True, 'resilient_2x': True, 'folds_ge_3': True, 'folds_positive_count': 4, 'adequate_val_n': True, 'adequate_final_time_n': True, 'adequate_final_inst_n': True, 'acceptable_dd': True, 'multi_symbol': True, 'not_one_symbol': True, 'not_fragile': True, 'rotations_ok': True, 'beats_baseline': True, 'val_n': 72, 'final_time_n': 91, 'final_inst_n': 101, 'final_time_expectancy': 0.00042325815248764516, 'final_inst_expectancy': 0.0003225654085423573, 'val_expectancy': 0.0008960993510709849, 'val_2x_expectancy': 0.0004072534192623298, 'symbols_positive': ['GOOGL', 'JPM', 'META', 'QQQ', 'SPY'], 'best1_share': 0.25114709322208384, 'rotation_positive': 2, 'rotation_total': 3, 'all_pass': True}
+
+STOP for user approval. Do NOT merge to live or enable paper/live trading.
+========================================================================
