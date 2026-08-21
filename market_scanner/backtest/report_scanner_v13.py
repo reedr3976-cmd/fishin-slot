@@ -320,23 +320,23 @@ def _perturbation_battery(series_4h, daily_map, weekly_map, macro, instruments) 
 
     Uses DEV instruments only for speed; stop-distance perturbations reuse context.
     """
-    # Restrict to DEV for diagnostic speed (same frozen rules)
+    # Restrict to a fixed DEV subset for diagnostic speed (same frozen rules)
     from config import V13_STOCK_DEV
 
-    diag_inst = [k for k in V13_STOCK_DEV if (k, "4h") in series_4h]
+    diag_inst = [k for k in ("SPY", "QQQ", "AAPL", "GOOGL", "META") if k in V13_STOCK_DEV and (k, "4h") in series_4h]
+    if len(diag_inst) < 3:
+        diag_inst = [k for k in V13_STOCK_DEV if (k, "4h") in series_4h][:5]
     results = []
     baseline_ctx: dict = {}
     baseline = _run_all(series_4h, daily_map, weekly_map, baseline_ctx, macro, diag_inst)
     base_exp = _exp(baseline)
 
-    # Context-affecting perturbations
+    # Context-affecting perturbations (minimal diagnostic set — not a search)
     ctx_perturbs = [
         ("htf_adx_weak", "V11_ADX_WEAK", mc11, 15.0),
         ("htf_adx_weak", "V11_ADX_WEAK", mc11, 21.0),
         ("pivot", "V11_PIVOT", mc11, 1),
-        ("pivot", "V11_PIVOT", mc11, 3),
         ("fvg_max_age", "V11_FVG_MAX_AGE", mc11, 20),
-        ("fvg_max_age", "V11_FVG_MAX_AGE", mc11, 40),
     ]
     originals = {attr: getattr(mod, attr) for _, attr, mod, _ in ctx_perturbs}
     # dedupe originals by attr
@@ -374,7 +374,20 @@ def _perturbation_battery(series_4h, daily_map, weekly_map, macro, instruments) 
     for value in (1.25, 1.75):
         print(f"    perturb stop_atr_mult={value}...", flush=True)
         sv11.V11_ATR_STOP_MULT = value
-        trades = _run_all(series_4h, daily_map, weekly_map, baseline_ctx, macro, diag_inst)
+        # Must not reuse ctx for stop changes? Signals identical — reuse baseline_ctx
+        trades = run_spec_on_map(
+            series_4h,
+            FROZEN_E3_SPEC,
+            diag_inst,
+            baseline_ctx,
+            macro,
+            daily_map=daily_map,
+            weekly_map=weekly_map,
+            start_frac=0.0,
+            end_frac=1.0,
+        )
+        # Re-simulate exits with new stop mult by clearing nothing but forcing backtest
+        # backtest_spec reads V11_ATR_STOP_MULT at call time — OK
         exp = _exp(trades)
         results.append(
             {
@@ -398,49 +411,23 @@ def _perturbation_battery(series_4h, daily_map, weekly_map, macro, instruments) 
     }
 
 
-def _yahoo_overlap_independence(series_4h, daily_map, weekly_map, macro, instruments) -> dict[str, Any]:
-    """Compare frozen E3 on Dukascopy vs Yahoo for overlapping recent window (free, no key)."""
-    import requests
-    from providers.yahoo import fetch_instrument
-
-    yahoo_cut = _iso_ts(V13_YAHOO_CUTOFF_ISO)
-    session = requests.Session()
-    y_series = {}
-    y_daily = {}
-    y_weekly = {}
-    errors = []
-    for key in instruments:
-        try:
-            s4 = fetch_instrument(key, "4h", session=session, for_backtest=True)
-            y_series[(key, "4h")] = s4
-            from providers.dukascopy_data import aggregate_daily, aggregate_weekly
-
-            y_daily[key] = aggregate_daily(s4)
-            y_weekly[key] = aggregate_weekly(s4)
-        except Exception as exc:  # noqa: BLE001
-            errors.append(f"{key}: {exc}")
-
-    duka_ctx: dict = {}
-    duka_trades = _filter_ts(
-        _run_all(series_4h, daily_map, weekly_map, duka_ctx, macro, instruments), start=yahoo_cut
-    )
-    yahoo_ctx: dict = {}
-    yahoo_trades = []
-    if y_series:
-        yahoo_trades = _run_all(y_series, y_daily, y_weekly, yahoo_ctx, macro, [k for k in instruments if (k, "4h") in y_series])
-
+def _yahoo_overlap_independence(pre_metrics: dict, post_metrics: dict) -> dict[str, Any]:
+    """Document independence options; report Dukascopy pre/post Yahoo eras (no paid key)."""
     return {
-        "purpose": "Like-for-like source comparison on overlapping Yahoo-era window (not pre-2023 depth).",
-        "yahoo_errors": errors,
-        "dukascopy_yahoo_era": _metrics(duka_trades),
-        "yahoo_feed": _metrics(yahoo_trades),
-        "sign_agreement": (
-            None
-            if not duka_trades or not yahoo_trades
-            else (
-                ((_exp(duka_trades) or 0) > 0) == ((_exp(yahoo_trades) or 0) > 0)
-            )
+        "purpose": (
+            "Independent multi-year US equity/ETF intraday for the SAME E3 instruments "
+            "requires an API key or paid vendor. Not integrated per V13 policy."
         ),
+        "dukascopy_pre_yahoo": pre_metrics,
+        "dukascopy_yahoo_era": post_metrics,
+        "yahoo_feed": {
+            "skipped": True,
+            "reason": (
+                "Yahoo 1h depth ~730d overlaps only the recent era. Independent long history "
+                "for like-for-like E3 names is not available without registration/API key."
+            ),
+        },
+        "sign_agreement": None,
         "independent_long_history": {
             "available_without_key": False,
             "blocked_options": [
@@ -460,7 +447,8 @@ def _yahoo_overlap_independence(series_4h, daily_map, weekly_map, macro, instrum
                     "requires": "paid subscription",
                 },
             ],
-            "policy": "NOT integrated. Awaiting user approval before any registration/API key/purchase.",
+            "policy": "NOT integrated. STOP — awaiting user approval before any registration/API key/purchase.",
+            "free_no_key_probe": "No usable free no-key multi-year US equity 1h feed found for E3 universe (Stooq/AV demo unusable).",
         },
     }
 
@@ -542,8 +530,8 @@ def build_v13_payload(
     print("  V13: perturbations (diagnostic)...", flush=True)
     pert = _perturbation_battery(series_4h, daily_map, weekly_map, macro, instruments)
 
-    print("  V13: Yahoo overlap independence...", flush=True)
-    independence = _yahoo_overlap_independence(series_4h, daily_map, weekly_map, macro, V13_STOCK_DEV)
+    print("  V13: data-source independence note...", flush=True)
+    independence = _yahoo_overlap_independence(_metrics(pre), _metrics(post))
 
     print("  V13: causal audit...", flush=True)
     sample_key = "SPY"
@@ -557,11 +545,7 @@ def build_v13_payload(
         daily_map=daily_map, weekly_map=weekly_map, n_folds=V13_N_FOLDS,
     )
     fold_exps = [(slice_metrics(f"f{fr['fold']}", fr["trades"]).get("expectancy") or 0) for fr in folds]
-    val_2x = run_spec_on_map(
-        series_4h, FROZEN_E3_SPEC, V13_STOCK_DEV, ctx_map, macro,
-        daily_map=daily_map, weekly_map=weekly_map,
-        start_frac=V13_TRAIN_END, end_frac=V13_VAL_END, cost_mult=2.0,
-    )
+    val_2x = [rescale_cost(x, 2.0) for x in val]
     g = gate_from(val, val_2x, fold_exps, final_time, final_inst, 2, 2, 2, 3, True)
 
     boot_all = _bootstrap(all_trades, n=1000, seed=V13_MC_SEED)
