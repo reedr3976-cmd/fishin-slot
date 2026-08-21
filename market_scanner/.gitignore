@@ -4,6 +4,7 @@ __pycache__/
 .venv/
 venv/
 output/
+research_cache/
 demo_data/
 *.log
 .DS_Store

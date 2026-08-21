@@ -1,0 +1,4348 @@
+{
+  "generated_at": "2026-08-21T01:13:39.837654+00:00",
+  "verdict_code": "V13_FAIL",
+  "verdict": "V13 FAIL",
+  "fail_reasons": [
+    "Daily HTF look-ahead leakage detected (same-day OHLC available mid-day)",
+    "Earliest-era expectancy non-positive (exp=-0.0005619995919159677, n=103)"
+  ],
+  "frozen_specification": {
+    "candidate_id": "V12_FROZEN_FVG_SWEEP_HTF",
+    "v13_name": "V13_FROZEN_E3_FVG_SWEEP_HTF",
+    "origin": "V12 follow-up E3 (pre-registered); NOT V11_S_FVG_SWEEP",
+    "primary_timeframe": "4H",
+    "component": "FVG_SWEEP_HTF",
+    "market_class": "stocks",
+    "liquidity_sweep": {
+      "definition": "Causal wick beyond last confirmed swing high/low then close back inside. Bullish: low < swing_low AND close > swing_low AND close >= open. Bearish: high > swing_high AND close < swing_high AND close <= open.",
+      "pivot": 2,
+      "source": "market_context.ContextArrays.liq_sweep_*"
+    },
+    "fvg": {
+      "definition": "Strict 3-candle FVG at bar i: bullish if low[i] > high[i-2]; bearish if high[i] < low[i-2]. Mitigation tracked forward only.",
+      "active": "fresh OR partial (partial touch of zone without full mitigation)",
+      "max_age_bars_4h": 30,
+      "proximity_filter_atr": 1.5
+    },
+    "sweep_fvg_sequence": "Entry bar i when (fresh OR partial FVG active at i) AND liquidity sweep occurred within bars i-0..i-3 (fvg_after_sweep_*).",
+    "daily_htf_alignment": {
+      "definition": "Completed Daily structure class at 4H timestamp t via _htf_class: swing_structure_dir on daily bars with pivot=2 AND ADX(14) >= ADX_WEAK. Bullish E3 requires daily_class==1; bearish requires daily_class==-1.",
+      "adx_weak": 18.0,
+      "adx_strong": 25.0,
+      "lookup": "np.searchsorted(daily.timestamps, t, side='right') - 1",
+      "note": "V13 causal audit verifies whether incomplete current-day OHLC leaks."
+    },
+    "entry_timing": "Signal bar close (4H close). Adverse entry slippage only in stress tests.",
+    "signal_timestamp": "series.timestamps[i] at the 4H signal bar",
+    "stop": {
+      "mode": "adaptive ATR (_adaptive_exit)",
+      "initial_stop_atr_mult": 1.5,
+      "structure_break_exit": true,
+      "trail_after_1R": true,
+      "trail_uses_confirmed_swing": true
+    },
+    "exit_target": {
+      "exit_mode": "atr (default adaptive \u2014 not r2/partial)",
+      "max_hold_bars_4h": 24,
+      "reasons": [
+        "atr_stop",
+        "structure_break",
+        "max_hold"
+      ]
+    },
+    "transaction_costs": {
+      "stock_round_trip": 0.001,
+      "applied": "once per trade (entry+exit proxy)",
+      "stress_multiples": [
+        1.0,
+        1.5,
+        2.0,
+        3.0
+      ]
+    },
+    "slippage": {
+      "baseline_entry_slip_atr": 0.0,
+      "stress_entry_slip_atr": 0.05
+    },
+    "universe": {
+      "dev": [
+        "SPY",
+        "QQQ",
+        "AAPL",
+        "MSFT",
+        "XOM",
+        "AMZN",
+        "GOOGL",
+        "META",
+        "JPM"
+      ],
+      "final_inst": [
+        "NVDA",
+        "JNJ",
+        "WMT",
+        "BA",
+        "DIS"
+      ],
+      "instrument_type": "Dukascopy US equity/ETF CFDs (bid), not cash equities"
+    },
+    "tuning_policy": "FROZEN for V13. Perturbations are diagnostic only; never replace candidate.",
+    "code_refs": {
+      "signal": "scanner_v11._signal_component FVG_SWEEP_HTF",
+      "context": "market_context_v11.build_v11_context / fvg_after_sweep_* / daily_class",
+      "exit": "scanner_v2._adaptive_exit via scanner_v11._exit_for_mode(mode='atr')"
+    }
+  },
+  "frozen_spec_hash": "20e2618beb0af6b1564814883ae77b584fd2df6c03602be1e32909e3fed6e1ad",
+  "frozen_spec_version": "E3-20e2618beb0a",
+  "git_commit": "d03cc6871c0fc3f7825464d2fc8dcec9bbc60616",
+  "data_integrity": {
+    "series_checked": 14,
+    "all_ok": true,
+    "by_series": [
+      {
+        "instrument": "AAPL",
+        "timeframe": "4h",
+        "bars": 5602,
+        "span_days": 3459.0,
+        "first_ts": 1488294000,
+        "last_ts": 1787155200,
+        "duplicate_timestamps": 0,
+        "median_bar_spacing_sec": 14400.0,
+        "large_gaps": 2381,
+        "issues": [],
+        "ok": true
+      },
+      {
+        "instrument": "AMZN",
+        "timeframe": "4h",
+        "bars": 5598,
+        "span_days": 3459.0,
+        "first_ts": 1488294000,
+        "last_ts": 1787155200,
+        "duplicate_timestamps": 0,
+        "median_bar_spacing_sec": 14400.0,
+        "large_gaps": 2381,
+        "issues": [],
+        "ok": true
+      },
+      {
+        "instrument": "BA",
+        "timeframe": "4h",
+        "bars": 5585,
+        "span_days": 3459.0,
+        "first_ts": 1488294000,
+        "last_ts": 1787155200,
+        "duplicate_timestamps": 0,
+        "median_bar_spacing_sec": 14400.0,
+        "large_gaps": 2380,
+        "issues": [],
+        "ok": true
+      },
+      {
+        "instrument": "DIS",
+        "timeframe": "4h",
+        "bars": 5588,
+        "span_days": 3457.9,
+        "first_ts": 1488391200,
+        "last_ts": 1787155200,
+        "duplicate_timestamps": 0,
+        "median_bar_spacing_sec": 14400.0,
+        "large_gaps": 2379,
+        "issues": [],
+        "ok": true
+      },
+      {
+        "instrument": "GOOGL",
+        "timeframe": "4h",
+        "bars": 5591,
+        "span_days": 3457.9,
+        "first_ts": 1488391200,
+        "last_ts": 1787155200,
+        "duplicate_timestamps": 0,
+        "median_bar_spacing_sec": 14400.0,
+        "large_gaps": 2380,
+        "issues": [],
+        "ok": true
+      },
+      {
+        "instrument": "JNJ",
+        "timeframe": "4h",
+        "bars": 5587,
+        "span_days": 3457.9,
+        "first_ts": 1488391200,
+        "last_ts": 1787155200,
+        "duplicate_timestamps": 0,
+        "median_bar_spacing_sec": 14400.0,
+        "large_gaps": 2380,
+        "issues": [],
+        "ok": true
+      },
+      {
+        "instrument": "JPM",
+        "timeframe": "4h",
+        "bars": 5588,
+        "span_days": 3457.9,
+        "first_ts": 1488391200,
+        "last_ts": 1787155200,
+        "duplicate_timestamps": 0,
+        "median_bar_spacing_sec": 14400.0,
+        "large_gaps": 2380,
+        "issues": [],
+        "ok": true
+      },
+      {
+        "instrument": "META",
+        "timeframe": "4h",
+        "bars": 5589,
+        "span_days": 3457.9,
+        "first_ts": 1488391200,
+        "last_ts": 1787155200,
+        "duplicate_timestamps": 0,
+        "median_bar_spacing_sec": 14400.0,
+        "large_gaps": 2380,
+        "issues": [],
+        "ok": true
+      },
+      {
+        "instrument": "MSFT",
+        "timeframe": "4h",
+        "bars": 5589,
+        "span_days": 3457.9,
+        "first_ts": 1488391200,
+        "last_ts": 1787155200,
+        "duplicate_timestamps": 0,
+        "median_bar_spacing_sec": 14400.0,
+        "large_gaps": 2380,
+        "issues": [],
+        "ok": true
+      },
+      {
+        "instrument": "NVDA",
+        "timeframe": "4h",
+        "bars": 5588,
+        "span_days": 3457.9,
+        "first_ts": 1488391200,
+        "last_ts": 1787155200,
+        "duplicate_timestamps": 0,
+        "median_bar_spacing_sec": 14400.0,
+        "large_gaps": 2380,
+        "issues": [],
+        "ok": true
+      },
+      {
+        "instrument": "QQQ",
+        "timeframe": "4h",
+        "bars": 5585,
+        "span_days": 3457.9,
+        "first_ts": 1488391200,
+        "last_ts": 1787155200,
+        "duplicate_timestamps": 0,
+        "median_bar_spacing_sec": 14400.0,
+        "large_gaps": 2380,
+        "issues": [],
+        "ok": true
+      },
+      {
+        "instrument": "SPY",
+        "timeframe": "4h",
+        "bars": 5614,
+        "span_days": 3471.0,
+        "first_ts": 1487257200,
+        "last_ts": 1787155200,
+        "duplicate_timestamps": 0,
+        "median_bar_spacing_sec": 14400.0,
+        "large_gaps": 2388,
+        "issues": [],
+        "ok": true
+      },
+      {
+        "instrument": "WMT",
+        "timeframe": "4h",
+        "bars": 5147,
+        "span_days": 3199.0,
+        "first_ts": 1510761600,
+        "last_ts": 1787155200,
+        "duplicate_timestamps": 0,
+        "median_bar_spacing_sec": 14400.0,
+        "large_gaps": 2199,
+        "issues": [],
+        "ok": true
+      },
+      {
+        "instrument": "XOM",
+        "timeframe": "4h",
+        "bars": 5587,
+        "span_days": 3457.9,
+        "first_ts": 1488391200,
+        "last_ts": 1787155200,
+        "duplicate_timestamps": 0,
+        "median_bar_spacing_sec": 14400.0,
+        "large_gaps": 2380,
+        "issues": [],
+        "ok": true
+      }
+    ],
+    "instruments_with_issues": []
+  },
+  "source_provenance": {
+    "AAPL": {
+      "source": "dukascopy_bid_cfd",
+      "note": "US equity CFD bid",
+      "bars_4h": 5602,
+      "first_ts": 1488294000,
+      "last_ts": 1787155200
+    },
+    "AMZN": {
+      "source": "dukascopy_bid_cfd",
+      "note": "US equity CFD bid",
+      "bars_4h": 5598,
+      "first_ts": 1488294000,
+      "last_ts": 1787155200
+    },
+    "BA": {
+      "source": "dukascopy_bid_cfd",
+      "note": "US equity CFD bid",
+      "bars_4h": 5585,
+      "first_ts": 1488294000,
+      "last_ts": 1787155200
+    },
+    "DIS": {
+      "source": "dukascopy_bid_cfd",
+      "note": "US equity CFD bid",
+      "bars_4h": 5588,
+      "first_ts": 1488391200,
+      "last_ts": 1787155200
+    },
+    "DXY": {
+      "source": "yahoo_1d",
+      "note": "macro context only"
+    },
+    "GOOGL": {
+      "source": "dukascopy_bid_cfd",
+      "note": "US equity CFD bid",
+      "bars_4h": 5591,
+      "first_ts": 1488391200,
+      "last_ts": 1787155200
+    },
+    "JNJ": {
+      "source": "dukascopy_bid_cfd",
+      "note": "US equity CFD bid",
+      "bars_4h": 5587,
+      "first_ts": 1488391200,
+      "last_ts": 1787155200
+    },
+    "JPM": {
+      "source": "dukascopy_bid_cfd",
+      "note": "US equity CFD bid",
+      "bars_4h": 5588,
+      "first_ts": 1488391200,
+      "last_ts": 1787155200
+    },
+    "META": {
+      "source": "dukascopy_bid_cfd",
+      "note": "US equity CFD bid (FB ticker on Dukascopy)",
+      "bars_4h": 5589,
+      "first_ts": 1488391200,
+      "last_ts": 1787155200
+    },
+    "MSFT": {
+      "source": "dukascopy_bid_cfd",
+      "note": "US equity CFD bid",
+      "bars_4h": 5589,
+      "first_ts": 1488391200,
+      "last_ts": 1787155200
+    },
+    "NVDA": {
+      "source": "dukascopy_bid_cfd",
+      "note": "US equity CFD bid",
+      "bars_4h": 5588,
+      "first_ts": 1488391200,
+      "last_ts": 1787155200
+    },
+    "QQQ": {
+      "source": "dukascopy_bid_cfd",
+      "note": "US ETF CFD bid",
+      "bars_4h": 5585,
+      "first_ts": 1488391200,
+      "last_ts": 1787155200
+    },
+    "SPY": {
+      "source": "dukascopy_bid_cfd",
+      "note": "US ETF CFD bid (not cash ETF)",
+      "bars_4h": 5614,
+      "first_ts": 1487257200,
+      "last_ts": 1787155200
+    },
+    "TIP": {
+      "source": "yahoo_1d",
+      "note": "macro context only"
+    },
+    "US10Y": {
+      "source": "yahoo_1d",
+      "note": "macro context only"
+    },
+    "US3M": {
+      "source": "yahoo_1d",
+      "note": "macro context only"
+    },
+    "WMT": {
+      "source": "dukascopy_bid_cfd",
+      "note": "US equity CFD bid",
+      "bars_4h": 5147,
+      "first_ts": 1510761600,
+      "last_ts": 1787155200
+    },
+    "XOM": {
+      "source": "dukascopy_bid_cfd",
+      "note": "US equity CFD bid",
+      "bars_4h": 5587,
+      "first_ts": 1488391200,
+      "last_ts": 1787155200
+    }
+  },
+  "reproducibility": {
+    "primary_data_source": "dukascopy_bid_cfd",
+    "yahoo_cutoff_iso": "2023-10-01T00:00:00+00:00",
+    "timezone": "UTC",
+    "aggregation": "1h\u21924h causal UTC buckets; daily/weekly from 4h",
+    "spec_hash": "20e2618beb0af6b1564814883ae77b584fd2df6c03602be1e32909e3fed6e1ad",
+    "spec_version": "E3-20e2618beb0a",
+    "git_commit": "d03cc6871c0fc3f7825464d2fc8dcec9bbc60616",
+    "stock_round_trip_cost": 0.001
+  },
+  "phase2_data_source_independence": {
+    "purpose": "Independent multi-year US equity/ETF intraday for the SAME E3 instruments requires an API key or paid vendor. Not integrated per V13 policy.",
+    "dukascopy_pre_yahoo": {
+      "label": "x",
+      "signals": 374,
+      "wins": 176,
+      "losses": 198,
+      "win_rate": 0.47058823529411764,
+      "avg_return": 0.0006541101655282159,
+      "median_return": -0.0005450660784615681,
+      "avg_winner": 0.008612676603913082,
+      "avg_loser": -0.006420171113036109,
+      "profit_factor": 1.1924468058595452,
+      "max_drawdown": 0.13747754974159443,
+      "total_net_return": 0.24463720190755273,
+      "cumulative_return": 0.2524005041271733,
+      "reliable": true,
+      "note": "Sample size meets the minimum threshold.",
+      "expectancy": 0.0006541101655282159,
+      "total_return": 0.2524005041271733,
+      "n": 374,
+      "avg_win": 0.008612676603913082,
+      "avg_loss": -0.006420171113036109,
+      "max_losing_streak": 9,
+      "avg_cost": 0.000580372642815909,
+      "gross_expectancy": 0.0012344828083441248,
+      "long_short": {
+        "bullish": {
+          "n": 228,
+          "win_rate": 0.5043859649122807,
+          "expectancy": 0.001217762916190951,
+          "max_drawdown": 0.08407883897009549,
+          "profit_factor": 1.3479607116191732
+        },
+        "bearish": {
+          "n": 146,
+          "win_rate": 0.4178082191780822,
+          "expectancy": -0.00022611467797249384,
+          "max_drawdown": 0.11863421096346927,
+          "profit_factor": 0.9302438322758682
+        }
+      },
+      "regime": {
+        "range": {
+          "n": 253,
+          "expectancy": 0.0010368154900224963,
+          "win_rate": 0.4743083003952569
+        },
+        "strong_trend_bear": {
+          "n": 14,
+          "expectancy": 0.000165189660349524,
+          "win_rate": 0.35714285714285715
+        },
+        "strong_trend_bull": {
+          "n": 33,
+          "expectancy": 0.002684024533975404,
+          "win_rate": 0.5454545454545454
+        },
+        "volatility_contraction": {
+          "n": 24,
+          "expectancy": -0.003221496472372683,
+          "win_rate": 0.375
+        },
+        "volatility_expansion": {
+          "n": 41,
+          "expectancy": -0.0005746679611078199,
+          "win_rate": 0.4878048780487805
+        },
+        "weak_trend_bear": {
+          "n": 4,
+          "expectancy": -0.0014970154103427103,
+          "win_rate": 0.5
+        },
+        "weak_trend_bull": {
+          "n": 5,
+          "expectancy": -0.0003394437100969417,
+          "win_rate": 0.4
+        }
+      }
+    },
+    "dukascopy_yahoo_era": {
+      "label": "x",
+      "signals": 177,
+      "wins": 85,
+      "losses": 92,
+      "win_rate": 0.480225988700565,
+      "avg_return": 0.0008203636832813032,
+      "median_return": -0.0003188316325667176,
+      "avg_winner": 0.0084586875613083,
+      "avg_loser": -0.006236783377939294,
+      "profit_factor": 1.253064487736346,
+      "max_drawdown": 0.09505254393454998,
+      "total_net_return": 0.14520437194079067,
+      "cumulative_return": 0.14608643298657298,
+      "reliable": true,
+      "note": "Sample size meets the minimum threshold.",
+      "expectancy": 0.0008203636832813032,
+      "total_return": 0.14608643298657298,
+      "n": 177,
+      "avg_win": 0.0084586875613083,
+      "avg_loss": -0.006236783377939294,
+      "max_losing_streak": 6,
+      "avg_cost": 0.0005679071952674887,
+      "gross_expectancy": 0.0013882708785487921,
+      "long_short": {
+        "bullish": {
+          "n": 110,
+          "win_rate": 0.5181818181818182,
+          "expectancy": 0.0012465594316050331,
+          "max_drawdown": 0.06276290030616427,
+          "profit_factor": 1.4239168984762332
+        },
+        "bearish": {
+          "n": 67,
+          "win_rate": 0.417910447761194,
+          "expectancy": 0.00012063932036174617,
+          "max_drawdown": 0.058489824974419555,
+          "profit_factor": 1.032289900702224
+        }
+      },
+      "regime": {
+        "range": {
+          "n": 117,
+          "expectancy": 0.0012904131660202473,
+          "win_rate": 0.47863247863247865
+        },
+        "strong_trend_bear": {
+          "n": 6,
+          "expectancy": -0.00654982434127973,
+          "win_rate": 0.16666666666666666
+        },
+        "strong_trend_bull": {
+          "n": 21,
+          "expectancy": 0.0001956383771633569,
+          "win_rate": 0.5238095238095238
+        },
+        "volatility_contraction": {
+          "n": 12,
+          "expectancy": -7.746707242881241e-05,
+          "win_rate": 0.5
+        },
+        "volatility_expansion": {
+          "n": 13,
+          "expectancy": 0.0048370642917094555,
+          "win_rate": 0.6923076923076923
+        },
+        "weak_trend_bear": {
+          "n": 3,
+          "expectancy": 0.0035621944121515454,
+          "win_rate": 0.6666666666666666
+        },
+        "weak_trend_bull": {
+          "n": 5,
+          "expectancy": -0.008644448503172432,
+          "win_rate": 0.0
+        }
+      }
+    },
+    "yahoo_feed": {
+      "skipped": true,
+      "reason": "Yahoo 1h depth ~730d overlaps only the recent era. Independent long history for like-for-like E3 names is not available without registration/API key."
+    },
+    "sign_agreement": null,
+    "independent_long_history": {
+      "available_without_key": false,
+      "blocked_options": [
+        {
+          "name": "HF Data Library",
+          "requires": "free account + email verification + API key",
+          "why": "Best free multi-year US equity/ETF 1-min history for like-for-like E3 instruments",
+          "url": "https://hfdatalibrary.com/"
+        },
+        {
+          "name": "EODHD Intraday",
+          "requires": "API key; freemium/paid tiers",
+          "url": "https://eodhd.com/"
+        },
+        {
+          "name": "Polygon / Norgate / Bloomberg",
+          "requires": "paid subscription"
+        }
+      ],
+      "policy": "NOT integrated. STOP \u2014 awaiting user approval before any registration/API key/purchase.",
+      "free_no_key_probe": "No usable free no-key multi-year US equity 1h feed found for E3 universe (Stooq/AV demo unusable)."
+    }
+  },
+  "phase3_pre_yahoo": {
+    "label": "x",
+    "signals": 374,
+    "wins": 176,
+    "losses": 198,
+    "win_rate": 0.47058823529411764,
+    "avg_return": 0.0006541101655282159,
+    "median_return": -0.0005450660784615681,
+    "avg_winner": 0.008612676603913082,
+    "avg_loser": -0.006420171113036109,
+    "profit_factor": 1.1924468058595452,
+    "max_drawdown": 0.13747754974159443,
+    "total_net_return": 0.24463720190755273,
+    "cumulative_return": 0.2524005041271733,
+    "reliable": true,
+    "note": "CRITICAL confirmation \u2014 reported separately, not buried in averages.",
+    "expectancy": 0.0006541101655282159,
+    "total_return": 0.2524005041271733,
+    "n": 374,
+    "avg_win": 0.008612676603913082,
+    "avg_loss": -0.006420171113036109,
+    "max_losing_streak": 9,
+    "avg_cost": 0.000580372642815909,
+    "gross_expectancy": 0.0012344828083441248,
+    "long_short": {
+      "bullish": {
+        "n": 228,
+        "win_rate": 0.5043859649122807,
+        "expectancy": 0.001217762916190951,
+        "max_drawdown": 0.08407883897009549,
+        "profit_factor": 1.3479607116191732
+      },
+      "bearish": {
+        "n": 146,
+        "win_rate": 0.4178082191780822,
+        "expectancy": -0.00022611467797249384,
+        "max_drawdown": 0.11863421096346927,
+        "profit_factor": 0.9302438322758682
+      }
+    },
+    "regime": {
+      "range": {
+        "n": 253,
+        "expectancy": 0.0010368154900224963,
+        "win_rate": 0.4743083003952569
+      },
+      "strong_trend_bear": {
+        "n": 14,
+        "expectancy": 0.000165189660349524,
+        "win_rate": 0.35714285714285715
+      },
+      "strong_trend_bull": {
+        "n": 33,
+        "expectancy": 0.002684024533975404,
+        "win_rate": 0.5454545454545454
+      },
+      "volatility_contraction": {
+        "n": 24,
+        "expectancy": -0.003221496472372683,
+        "win_rate": 0.375
+      },
+      "volatility_expansion": {
+        "n": 41,
+        "expectancy": -0.0005746679611078199,
+        "win_rate": 0.4878048780487805
+      },
+      "weak_trend_bear": {
+        "n": 4,
+        "expectancy": -0.0014970154103427103,
+        "win_rate": 0.5
+      },
+      "weak_trend_bull": {
+        "n": 5,
+        "expectancy": -0.0003394437100969417,
+        "win_rate": 0.4
+      }
+    },
+    "year_breakdown": [
+      {
+        "year": 2017,
+        "n": 33,
+        "expectancy": -0.0022078215163996964,
+        "win_rate": 0.24242424242424243,
+        "profit_factor": 0.2865985053657427,
+        "max_drawdown": 0.07194030115664096,
+        "max_losing_streak": 8,
+        "avg_win": 0.0036587085951304017,
+        "avg_loss": -0.004085111152089327
+      },
+      {
+        "year": 2018,
+        "n": 61,
+        "expectancy": -0.00030264119822045435,
+        "win_rate": 0.4098360655737705,
+        "profit_factor": 0.920337543565695,
+        "max_drawdown": 0.09310663073270586,
+        "max_losing_streak": 9,
+        "avg_win": 0.008531223481958748,
+        "avg_loss": -0.006437269448344901
+      },
+      {
+        "year": 2019,
+        "n": 60,
+        "expectancy": 0.001776015231157184,
+        "win_rate": 0.5166666666666667,
+        "profit_factor": 1.5246872692737783,
+        "max_drawdown": 0.05196861672926043,
+        "max_losing_streak": 6,
+        "avg_win": 0.009988872960445342,
+        "avg_loss": -0.007003246479461191
+      },
+      {
+        "year": 2020,
+        "n": 54,
+        "expectancy": 0.0017441917919077648,
+        "win_rate": 0.5740740740740741,
+        "profit_factor": 1.5898734852118608,
+        "max_drawdown": 0.05391046221031847,
+        "max_losing_streak": 4,
+        "avg_win": 0.008188983495850349,
+        "avg_loss": -0.0069422665916670226
+      },
+      {
+        "year": 2021,
+        "n": 50,
+        "expectancy": 0.0011924743347085226,
+        "win_rate": 0.52,
+        "profit_factor": 1.34094408484956,
+        "max_drawdown": 0.057389247616262705,
+        "max_losing_streak": 5,
+        "avg_win": 0.009019307747327303,
+        "avg_loss": -0.007286595195628489
+      },
+      {
+        "year": 2022,
+        "n": 64,
+        "expectancy": 0.0015899532864363033,
+        "win_rate": 0.5,
+        "profit_factor": 1.4917162365831382,
+        "max_drawdown": 0.03689431029455205,
+        "max_losing_streak": 4,
+        "avg_win": 0.009646861162310809,
+        "avg_loss": -0.006466954589438202
+      },
+      {
+        "year": 2023,
+        "n": 52,
+        "expectancy": -0.0005032994742232586,
+        "win_rate": 0.4423076923076923,
+        "profit_factor": 0.8642111622014238,
+        "max_drawdown": 0.08111099904966146,
+        "max_losing_streak": 5,
+        "avg_win": 0.007241987726481232,
+        "avg_loss": -0.00664611346098889
+      }
+    ],
+    "instrument_table": [
+      {
+        "instrument": "QQQ",
+        "n": 25,
+        "expectancy": 0.005096509353360462,
+        "win_rate": 0.6,
+        "profit_factor": 3.251979994091409,
+        "max_drawdown": 0.02942743272674564,
+        "total_pnl": 0.12741273383401155,
+        "pnl_share": 0.5208232142965742
+      },
+      {
+        "instrument": "META",
+        "n": 27,
+        "expectancy": 0.003019792610573913,
+        "win_rate": 0.48148148148148145,
+        "profit_factor": 2.019389160298764,
+        "max_drawdown": 0.02878485647294019,
+        "total_pnl": 0.08153440048549564,
+        "pnl_share": 0.3332870056137543
+      },
+      {
+        "instrument": "AAPL",
+        "n": 36,
+        "expectancy": 0.002253581601380481,
+        "win_rate": 0.4444444444444444,
+        "profit_factor": 1.6416136340937681,
+        "max_drawdown": 0.02377098197338288,
+        "total_pnl": 0.08112893764969732,
+        "pnl_share": 0.3316296009645974
+      },
+      {
+        "instrument": "MSFT",
+        "n": 22,
+        "expectancy": 0.0019703066536580615,
+        "win_rate": 0.5,
+        "profit_factor": 1.5192976920275598,
+        "max_drawdown": 0.032016554387457354,
+        "total_pnl": 0.04334674638047735,
+        "pnl_share": 0.17718787675170478
+      },
+      {
+        "instrument": "SPY",
+        "n": 27,
+        "expectancy": 0.0010923452576338008,
+        "win_rate": 0.48148148148148145,
+        "profit_factor": 1.4076038116816942,
+        "max_drawdown": 0.022195796398891247,
+        "total_pnl": 0.029493321956112623,
+        "pnl_share": 0.12055943137895285
+      },
+      {
+        "instrument": "JPM",
+        "n": 30,
+        "expectancy": 0.0004094918655619332,
+        "win_rate": 0.6,
+        "profit_factor": 1.1571776402407423,
+        "max_drawdown": 0.028075119378317567,
+        "total_pnl": 0.012284755966857991,
+        "pnl_share": 0.05021622169918519
+      },
+      {
+        "instrument": "DIS",
+        "n": 37,
+        "expectancy": 0.0002083539815553647,
+        "win_rate": 0.5135135135135135,
+        "profit_factor": 1.0675217673351487,
+        "max_drawdown": 0.033503814613255224,
+        "total_pnl": 0.007709097317548501,
+        "pnl_share": 0.03151236711929749
+      },
+      {
+        "instrument": "XOM",
+        "n": 23,
+        "expectancy": -0.00023949399028823446,
+        "win_rate": 0.5652173913043478,
+        "profit_factor": 0.9272883066217198,
+        "max_drawdown": 0.046182203439936904,
+        "total_pnl": -0.005508361776629386,
+        "pnl_share": -0.022516451846563274
+      },
+      {
+        "instrument": "BA",
+        "n": 20,
+        "expectancy": -0.00028718285874037,
+        "win_rate": 0.45,
+        "profit_factor": 0.925899586701095,
+        "max_drawdown": 0.024992253167767545,
+        "total_pnl": -0.0057436571748074,
+        "pnl_share": -0.0234782654887375
+      },
+      {
+        "instrument": "GOOGL",
+        "n": 23,
+        "expectancy": -0.0003253894587928091,
+        "win_rate": 0.391304347826087,
+        "profit_factor": 0.9159636219679497,
+        "max_drawdown": 0.02823751615783892,
+        "total_pnl": -0.00748395755223461,
+        "pnl_share": -0.030592066512691585
+      },
+      {
+        "instrument": "WMT",
+        "n": 29,
+        "expectancy": -0.0004917583798060729,
+        "win_rate": 0.41379310344827586,
+        "profit_factor": 0.8617262585655204,
+        "max_drawdown": 0.0667623816924893,
+        "total_pnl": -0.014260993014376127,
+        "pnl_share": -0.05829445768336288
+      },
+      {
+        "instrument": "JNJ",
+        "n": 16,
+        "expectancy": -0.001543922767611061,
+        "win_rate": 0.25,
+        "profit_factor": 0.7096358453288978,
+        "max_drawdown": 0.04294543491960656,
+        "total_pnl": -0.024702764281776975,
+        "pnl_share": -0.10097713712042884
+      },
+      {
+        "instrument": "NVDA",
+        "n": 32,
+        "expectancy": -0.001251400695001431,
+        "win_rate": 0.4375,
+        "profit_factor": 0.7158241900489787,
+        "max_drawdown": 0.0612577260263948,
+        "total_pnl": -0.04004482224004579,
+        "pnl_share": -0.16369064855139473
+      },
+      {
+        "instrument": "AMZN",
+        "n": 27,
+        "expectancy": -0.0015010457645473348,
+        "win_rate": 0.37037037037037035,
+        "profit_factor": 0.5424468137778485,
+        "max_drawdown": 0.06341296010116056,
+        "total_pnl": -0.04052823564277805,
+        "pnl_share": -0.16566669062088726
+      }
+    ],
+    "critical": true
+  },
+  "phase3_post_yahoo": {
+    "label": "x",
+    "signals": 177,
+    "wins": 85,
+    "losses": 92,
+    "win_rate": 0.480225988700565,
+    "avg_return": 0.0008203636832813032,
+    "median_return": -0.0003188316325667176,
+    "avg_winner": 0.0084586875613083,
+    "avg_loser": -0.006236783377939294,
+    "profit_factor": 1.253064487736346,
+    "max_drawdown": 0.09505254393454998,
+    "total_net_return": 0.14520437194079067,
+    "cumulative_return": 0.14608643298657298,
+    "reliable": true,
+    "note": "Sample size meets the minimum threshold.",
+    "expectancy": 0.0008203636832813032,
+    "total_return": 0.14608643298657298,
+    "n": 177,
+    "avg_win": 0.0084586875613083,
+    "avg_loss": -0.006236783377939294,
+    "max_losing_streak": 6,
+    "avg_cost": 0.0005679071952674887,
+    "gross_expectancy": 0.0013882708785487921,
+    "long_short": {
+      "bullish": {
+        "n": 110,
+        "win_rate": 0.5181818181818182,
+        "expectancy": 0.0012465594316050331,
+        "max_drawdown": 0.06276290030616427,
+        "profit_factor": 1.4239168984762332
+      },
+      "bearish": {
+        "n": 67,
+        "win_rate": 0.417910447761194,
+        "expectancy": 0.00012063932036174617,
+        "max_drawdown": 0.058489824974419555,
+        "profit_factor": 1.032289900702224
+      }
+    },
+    "regime": {
+      "range": {
+        "n": 117,
+        "expectancy": 0.0012904131660202473,
+        "win_rate": 0.47863247863247865
+      },
+      "strong_trend_bear": {
+        "n": 6,
+        "expectancy": -0.00654982434127973,
+        "win_rate": 0.16666666666666666
+      },
+      "strong_trend_bull": {
+        "n": 21,
+        "expectancy": 0.0001956383771633569,
+        "win_rate": 0.5238095238095238
+      },
+      "volatility_contraction": {
+        "n": 12,
+        "expectancy": -7.746707242881241e-05,
+        "win_rate": 0.5
+      },
+      "volatility_expansion": {
+        "n": 13,
+        "expectancy": 0.0048370642917094555,
+        "win_rate": 0.6923076923076923
+      },
+      "weak_trend_bear": {
+        "n": 3,
+        "expectancy": 0.0035621944121515454,
+        "win_rate": 0.6666666666666666
+      },
+      "weak_trend_bull": {
+        "n": 5,
+        "expectancy": -0.008644448503172432,
+        "win_rate": 0.0
+      }
+    }
+  },
+  "phase4_eras": [
+    {
+      "era": "earliest",
+      "start_iso": "2017-02-16",
+      "end_iso": "2019-05-03",
+      "label": "x",
+      "signals": 103,
+      "wins": 36,
+      "losses": 67,
+      "win_rate": 0.34951456310679613,
+      "avg_return": -0.0005619995919159677,
+      "median_return": -0.0013206409048068463,
+      "avg_winner": 0.008429354117236332,
+      "avg_loser": -0.005393174719221681,
+      "profit_factor": 0.8398031647627854,
+      "max_drawdown": 0.13747754974159443,
+      "total_net_return": -0.05788595796734467,
+      "cumulative_return": -0.06132036609090652,
+      "reliable": true,
+      "note": "Sample size meets the minimum threshold.",
+      "expectancy": -0.0005619995919159677,
+      "total_return": -0.06132036609090652,
+      "n": 103,
+      "avg_win": 0.008429354117236332,
+      "avg_loss": -0.005393174719221681,
+      "max_losing_streak": 9,
+      "avg_cost": 0.0007030691380334433,
+      "gross_expectancy": 0.00014106954611747542,
+      "long_short": {
+        "bullish": {
+          "n": 57,
+          "win_rate": 0.3333333333333333,
+          "expectancy": -0.00044790330357924555,
+          "max_drawdown": 0.08407883897009549,
+          "profit_factor": 0.8814493870242066
+        },
+        "bearish": {
+          "n": 46,
+          "win_rate": 0.3695652173913043,
+          "expectancy": -0.0007033797752897327,
+          "max_drawdown": 0.08085659583777038,
+          "profit_factor": 0.778368262265981
+        }
+      },
+      "regime": {
+        "range": {
+          "n": 69,
+          "expectancy": -0.0003349293941064013,
+          "win_rate": 0.3333333333333333
+        },
+        "strong_trend_bull": {
+          "n": 11,
+          "expectancy": 0.0012217338499454237,
+          "win_rate": 0.45454545454545453
+        },
+        "volatility_contraction": {
+          "n": 6,
+          "expectancy": -0.0005915554746331939,
+          "win_rate": 0.16666666666666666
+        },
+        "volatility_expansion": {
+          "n": 17,
+          "expectancy": -0.0026273864279766756,
+          "win_rate": 0.4117647058823529
+        }
+      }
+    },
+    {
+      "era": "middle",
+      "start_iso": "2019-05-03",
+      "end_iso": "2021-07-17",
+      "label": "x",
+      "signals": 131,
+      "wins": 74,
+      "losses": 57,
+      "win_rate": 0.5648854961832062,
+      "avg_return": 0.001396243100861953,
+      "median_return": 0.000846681296943102,
+      "avg_winner": 0.008486196017696129,
+      "avg_loser": -0.007808257177133292,
+      "profit_factor": 1.4109636132477963,
+      "max_drawdown": 0.057389247616262795,
+      "total_net_return": 0.18290784621291584,
+      "cumulative_return": 0.19154549965496392,
+      "reliable": true,
+      "note": "Sample size meets the minimum threshold.",
+      "expectancy": 0.001396243100861953,
+      "total_return": 0.19154549965496392,
+      "n": 131,
+      "avg_win": 0.008486196017696129,
+      "avg_loss": -0.007808257177133292,
+      "max_losing_streak": 6,
+      "avg_cost": 0.0006531547874524971,
+      "gross_expectancy": 0.00204939788831445,
+      "long_short": {
+        "bullish": {
+          "n": 97,
+          "win_rate": 0.6082474226804123,
+          "expectancy": 0.002366545590431095,
+          "max_drawdown": 0.03934327353617887,
+          "profit_factor": 1.746658861543879
+        },
+        "bearish": {
+          "n": 34,
+          "win_rate": 0.4411764705882353,
+          "expectancy": -0.0013719728252617738,
+          "max_drawdown": 0.0620876671057492,
+          "profit_factor": 0.6610636062832304
+        }
+      },
+      "regime": {
+        "range": {
+          "n": 83,
+          "expectancy": 0.0020132415429320078,
+          "win_rate": 0.5783132530120482
+        },
+        "strong_trend_bear": {
+          "n": 5,
+          "expectancy": -0.005444118344978349,
+          "win_rate": 0.2
+        },
+        "strong_trend_bull": {
+          "n": 9,
+          "expectancy": 0.008375554418348263,
+          "win_rate": 0.7777777777777778
+        },
+        "volatility_contraction": {
+          "n": 14,
+          "expectancy": -0.00333155142023989,
+          "win_rate": 0.5
+        },
+        "volatility_expansion": {
+          "n": 15,
+          "expectancy": 0.0019428182420590393,
+          "win_rate": 0.6
+        },
+        "weak_trend_bear": {
+          "n": 2,
+          "expectancy": -0.0015249558523154107,
+          "win_rate": 0.5
+        },
+        "weak_trend_bull": {
+          "n": 3,
+          "expectancy": -0.003933747311193242,
+          "win_rate": 0.3333333333333333
+        }
+      }
+    },
+    {
+      "era": "late_pre_yahoo",
+      "start_iso": "2021-07-17",
+      "end_iso": "2023-10-01",
+      "label": "x",
+      "signals": 140,
+      "wins": 66,
+      "losses": 74,
+      "win_rate": 0.4714285714285714,
+      "avg_return": 0.0008543950975855823,
+      "median_return": -0.0003061172575166384,
+      "avg_winner": 0.008854482253919408,
+      "avg_loser": -0.006280817771577018,
+      "profit_factor": 1.2573587097064411,
+      "max_drawdown": 0.08111099904966142,
+      "total_net_return": 0.11961531366198151,
+      "cumulative_return": 0.11973488250345055,
+      "reliable": true,
+      "note": "Sample size meets the minimum threshold.",
+      "expectancy": 0.0008543950975855823,
+      "total_return": 0.11973488250345055,
+      "n": 140,
+      "avg_win": 0.008854482253919408,
+      "avg_loss": -0.006280817771577018,
+      "max_losing_streak": 5,
+      "avg_cost": 0.000421999785995916,
+      "gross_expectancy": 0.0012763948835814985,
+      "long_short": {
+        "bullish": {
+          "n": 74,
+          "win_rate": 0.5,
+          "expectancy": 0.000994939336807265,
+          "max_drawdown": 0.07203828320294378,
+          "profit_factor": 1.2675960771723231
+        },
+        "bearish": {
+          "n": 66,
+          "win_rate": 0.4393939393939394,
+          "expectancy": 0.000696815193003696,
+          "max_drawdown": 0.062265446360766245,
+          "profit_factor": 1.2425062539412344
+        }
+      },
+      "regime": {
+        "range": {
+          "n": 101,
+          "expectancy": 0.0011715386050066994,
+          "win_rate": 0.48514851485148514
+        },
+        "strong_trend_bear": {
+          "n": 9,
+          "expectancy": 0.003281471885531676,
+          "win_rate": 0.4444444444444444
+        },
+        "strong_trend_bull": {
+          "n": 13,
+          "expectancy": -1.894249948813237e-05,
+          "win_rate": 0.46153846153846156
+        },
+        "volatility_contraction": {
+          "n": 4,
+          "expectancy": -0.006781215651446689,
+          "win_rate": 0.25
+        },
+        "volatility_expansion": {
+          "n": 9,
+          "expectancy": -0.0008931211956336357,
+          "win_rate": 0.4444444444444444
+        },
+        "weak_trend_bear": {
+          "n": 2,
+          "expectancy": -0.00146907496837001,
+          "win_rate": 0.5
+        },
+        "weak_trend_bull": {
+          "n": 2,
+          "expectancy": 0.005052011691547508,
+          "win_rate": 0.5
+        }
+      }
+    },
+    {
+      "era": "pre_oct_2023",
+      "start_iso": "2017-02-16",
+      "end_iso": "2023-10-01",
+      "label": "x",
+      "signals": 374,
+      "wins": 176,
+      "losses": 198,
+      "win_rate": 0.47058823529411764,
+      "avg_return": 0.0006541101655282159,
+      "median_return": -0.0005450660784615681,
+      "avg_winner": 0.008612676603913082,
+      "avg_loser": -0.006420171113036109,
+      "profit_factor": 1.1924468058595452,
+      "max_drawdown": 0.13747754974159443,
+      "total_net_return": 0.24463720190755273,
+      "cumulative_return": 0.2524005041271733,
+      "reliable": true,
+      "note": "Sample size meets the minimum threshold.",
+      "expectancy": 0.0006541101655282159,
+      "total_return": 0.2524005041271733,
+      "n": 374,
+      "avg_win": 0.008612676603913082,
+      "avg_loss": -0.006420171113036109,
+      "max_losing_streak": 9,
+      "avg_cost": 0.000580372642815909,
+      "gross_expectancy": 0.0012344828083441248,
+      "long_short": {
+        "bullish": {
+          "n": 228,
+          "win_rate": 0.5043859649122807,
+          "expectancy": 0.001217762916190951,
+          "max_drawdown": 0.08407883897009549,
+          "profit_factor": 1.3479607116191732
+        },
+        "bearish": {
+          "n": 146,
+          "win_rate": 0.4178082191780822,
+          "expectancy": -0.00022611467797249384,
+          "max_drawdown": 0.11863421096346927,
+          "profit_factor": 0.9302438322758682
+        }
+      },
+      "regime": {
+        "range": {
+          "n": 253,
+          "expectancy": 0.0010368154900224963,
+          "win_rate": 0.4743083003952569
+        },
+        "strong_trend_bear": {
+          "n": 14,
+          "expectancy": 0.000165189660349524,
+          "win_rate": 0.35714285714285715
+        },
+        "strong_trend_bull": {
+          "n": 33,
+          "expectancy": 0.002684024533975404,
+          "win_rate": 0.5454545454545454
+        },
+        "volatility_contraction": {
+          "n": 24,
+          "expectancy": -0.003221496472372683,
+          "win_rate": 0.375
+        },
+        "volatility_expansion": {
+          "n": 41,
+          "expectancy": -0.0005746679611078199,
+          "win_rate": 0.4878048780487805
+        },
+        "weak_trend_bear": {
+          "n": 4,
+          "expectancy": -0.0014970154103427103,
+          "win_rate": 0.5
+        },
+        "weak_trend_bull": {
+          "n": 5,
+          "expectancy": -0.0003394437100969417,
+          "win_rate": 0.4
+        }
+      }
+    },
+    {
+      "era": "oct_2023_onward",
+      "start_iso": "2023-10-01",
+      "end_iso": "2026-08-19",
+      "label": "x",
+      "signals": 177,
+      "wins": 85,
+      "losses": 92,
+      "win_rate": 0.480225988700565,
+      "avg_return": 0.0008203636832813032,
+      "median_return": -0.0003188316325667176,
+      "avg_winner": 0.0084586875613083,
+      "avg_loser": -0.006236783377939294,
+      "profit_factor": 1.253064487736346,
+      "max_drawdown": 0.09505254393454998,
+      "total_net_return": 0.14520437194079067,
+      "cumulative_return": 0.14608643298657298,
+      "reliable": true,
+      "note": "Sample size meets the minimum threshold.",
+      "expectancy": 0.0008203636832813032,
+      "total_return": 0.14608643298657298,
+      "n": 177,
+      "avg_win": 0.0084586875613083,
+      "avg_loss": -0.006236783377939294,
+      "max_losing_streak": 6,
+      "avg_cost": 0.0005679071952674887,
+      "gross_expectancy": 0.0013882708785487921,
+      "long_short": {
+        "bullish": {
+          "n": 110,
+          "win_rate": 0.5181818181818182,
+          "expectancy": 0.0012465594316050331,
+          "max_drawdown": 0.06276290030616427,
+          "profit_factor": 1.4239168984762332
+        },
+        "bearish": {
+          "n": 67,
+          "win_rate": 0.417910447761194,
+          "expectancy": 0.00012063932036174617,
+          "max_drawdown": 0.058489824974419555,
+          "profit_factor": 1.032289900702224
+        }
+      },
+      "regime": {
+        "range": {
+          "n": 117,
+          "expectancy": 0.0012904131660202473,
+          "win_rate": 0.47863247863247865
+        },
+        "strong_trend_bear": {
+          "n": 6,
+          "expectancy": -0.00654982434127973,
+          "win_rate": 0.16666666666666666
+        },
+        "strong_trend_bull": {
+          "n": 21,
+          "expectancy": 0.0001956383771633569,
+          "win_rate": 0.5238095238095238
+        },
+        "volatility_contraction": {
+          "n": 12,
+          "expectancy": -7.746707242881241e-05,
+          "win_rate": 0.5
+        },
+        "volatility_expansion": {
+          "n": 13,
+          "expectancy": 0.0048370642917094555,
+          "win_rate": 0.6923076923076923
+        },
+        "weak_trend_bear": {
+          "n": 3,
+          "expectancy": 0.0035621944121515454,
+          "win_rate": 0.6666666666666666
+        },
+        "weak_trend_bull": {
+          "n": 5,
+          "expectancy": -0.008644448503172432,
+          "win_rate": 0.0
+        }
+      }
+    }
+  ],
+  "phase5_instruments": {
+    "all_history": [
+      {
+        "instrument": "QQQ",
+        "n": 36,
+        "expectancy": 0.00451295560369213,
+        "win_rate": 0.5833333333333334,
+        "profit_factor": 2.8603126513916304,
+        "max_drawdown": 0.02942743272674564,
+        "total_pnl": 0.16246640173291665,
+        "pnl_share": 0.41674980974738096
+      },
+      {
+        "instrument": "MSFT",
+        "n": 32,
+        "expectancy": 0.0029277245970537494,
+        "win_rate": 0.5625,
+        "profit_factor": 1.9759803059962089,
+        "max_drawdown": 0.032016554387457354,
+        "total_pnl": 0.09368718710571997,
+        "pnl_share": 0.2403211801678347
+      },
+      {
+        "instrument": "SPY",
+        "n": 37,
+        "expectancy": 0.0025104500415985003,
+        "win_rate": 0.5135135135135135,
+        "profit_factor": 2.0998260990383493,
+        "max_drawdown": 0.022195796398891247,
+        "total_pnl": 0.09288665153914451,
+        "pnl_share": 0.2382676906985795
+      },
+      {
+        "instrument": "META",
+        "n": 37,
+        "expectancy": 0.002180833898461146,
+        "win_rate": 0.4594594594594595,
+        "profit_factor": 1.6998795251210528,
+        "max_drawdown": 0.02878485647294019,
+        "total_pnl": 0.08069085424306235,
+        "pnl_share": 0.20698370737250515
+      },
+      {
+        "instrument": "AAPL",
+        "n": 49,
+        "expectancy": 0.001064485842728758,
+        "win_rate": 0.42857142857142855,
+        "profit_factor": 1.283738147574516,
+        "max_drawdown": 0.04632597606901995,
+        "total_pnl": 0.052159806293709136,
+        "pnl_share": 0.1337974443792914
+      },
+      {
+        "instrument": "JPM",
+        "n": 42,
+        "expectancy": 0.0005213689056052626,
+        "win_rate": 0.5476190476190477,
+        "profit_factor": 1.1688054102084973,
+        "max_drawdown": 0.031341546176516626,
+        "total_pnl": 0.021897494035421013,
+        "pnl_share": 0.05617023812842394
+      },
+      {
+        "instrument": "JNJ",
+        "n": 28,
+        "expectancy": 0.0006490680001827104,
+        "win_rate": 0.35714285714285715,
+        "profit_factor": 1.1633339960956504,
+        "max_drawdown": 0.04294543491960656,
+        "total_pnl": 0.01817390400511589,
+        "pnl_share": 0.04661869134610545
+      },
+      {
+        "instrument": "WMT",
+        "n": 42,
+        "expectancy": 0.0003813425613806365,
+        "win_rate": 0.42857142857142855,
+        "profit_factor": 1.1046855012714187,
+        "max_drawdown": 0.0667623816924893,
+        "total_pnl": 0.016016387577986717,
+        "pnl_share": 0.041084349777988104
+      },
+      {
+        "instrument": "NVDA",
+        "n": 41,
+        "expectancy": 0.00025829781423286033,
+        "win_rate": 0.5121951219512195,
+        "profit_factor": 1.065746474076482,
+        "max_drawdown": 0.0612577260263948,
+        "total_pnl": 0.010590210383547266,
+        "pnl_share": 0.027165420760555115
+      },
+      {
+        "instrument": "DIS",
+        "n": 53,
+        "expectancy": 0.00012854241122192296,
+        "win_rate": 0.5094339622641509,
+        "profit_factor": 1.0404402322558413,
+        "max_drawdown": 0.047193087073830076,
+        "total_pnl": 0.006812747794761924,
+        "pnl_share": 0.017475683076870165
+      },
+      {
+        "instrument": "XOM",
+        "n": 37,
+        "expectancy": 0.0001593299592396219,
+        "win_rate": 0.5675675675675675,
+        "profit_factor": 1.0491447783109078,
+        "max_drawdown": 0.05420084453158706,
+        "total_pnl": 0.005895208491866006,
+        "pnl_share": 0.01512206210761751
+      },
+      {
+        "instrument": "BA",
+        "n": 38,
+        "expectancy": -0.0005201717044853918,
+        "win_rate": 0.47368421052631576,
+        "profit_factor": 0.8484396151694534,
+        "max_drawdown": 0.03336385542755193,
+        "total_pnl": -0.01976652477044489,
+        "pnl_share": -0.050703993869403184
+      },
+      {
+        "instrument": "GOOGL",
+        "n": 37,
+        "expectancy": -0.0008515969308530467,
+        "win_rate": 0.43243243243243246,
+        "profit_factor": 0.7657655398123712,
+        "max_drawdown": 0.05328646293544745,
+        "total_pnl": -0.03150908644156273,
+        "pnl_share": -0.08082536228888824
+      },
+      {
+        "instrument": "AMZN",
+        "n": 42,
+        "expectancy": -0.00286094447959287,
+        "win_rate": 0.2619047619047619,
+        "profit_factor": 0.29173107749005767,
+        "max_drawdown": 0.1190310734614815,
+        "total_pnl": -0.12015966814290052,
+        "pnl_share": -0.3082269214048607
+      }
+    ],
+    "concentration": {
+      "best1_share_of_positive_pnl": 0.2894585814570974,
+      "best2_share_of_positive_pnl": 0.45637654105411235,
+      "best3_share_of_positive_pnl": 0.6218682248978928,
+      "ranked_positive": [
+        {
+          "instrument": "QQQ",
+          "pnl": 0.16246640173291665
+        },
+        {
+          "instrument": "MSFT",
+          "pnl": 0.09368718710571998
+        },
+        {
+          "instrument": "SPY",
+          "pnl": 0.09288665153914451
+        },
+        {
+          "instrument": "META",
+          "pnl": 0.08069085424306235
+        },
+        {
+          "instrument": "AAPL",
+          "pnl": 0.052159806293709136
+        },
+        {
+          "instrument": "JPM",
+          "pnl": 0.021897494035421013
+        },
+        {
+          "instrument": "JNJ",
+          "pnl": 0.01817390400511589
+        },
+        {
+          "instrument": "WMT",
+          "pnl": 0.016016387577986717
+        },
+        {
+          "instrument": "NVDA",
+          "pnl": 0.010590210383547266
+        },
+        {
+          "instrument": "DIS",
+          "pnl": 0.006812747794761924
+        },
+        {
+          "instrument": "XOM",
+          "pnl": 0.005895208491866006
+        }
+      ],
+      "instruments_positive": 11,
+      "instruments_total": 14
+    },
+    "leave_one_out": [
+      {
+        "held_out": "AAPL",
+        "n": 502,
+        "expectancy": 0.0006726728437343311,
+        "positive": true
+      },
+      {
+        "held_out": "AMZN",
+        "n": 509,
+        "expectancy": 0.0010019670766036226,
+        "positive": true
+      },
+      {
+        "held_out": "BA",
+        "n": 513,
+        "expectancy": 0.0007984563325902305,
+        "positive": true
+      },
+      {
+        "held_out": "DIS",
+        "n": 498,
+        "expectancy": 0.0007691341888626134,
+        "positive": true
+      },
+      {
+        "held_out": "GOOGL",
+        "n": 514,
+        "expectancy": 0.0008197483663227745,
+        "positive": true
+      },
+      {
+        "held_out": "JNJ",
+        "n": 523,
+        "expectancy": 0.0007106456402356166,
+        "positive": true
+      },
+      {
+        "held_out": "JPM",
+        "n": 509,
+        "expectancy": 0.0007228763847012226,
+        "positive": true
+      },
+      {
+        "held_out": "META",
+        "n": 514,
+        "expectancy": 0.000601460543979146,
+        "positive": true
+      },
+      {
+        "held_out": "MSFT",
+        "n": 519,
+        "expectancy": 0.0005706250226254786,
+        "positive": true
+      },
+      {
+        "held_out": "NVDA",
+        "n": 510,
+        "expectancy": 0.0007436301244407767,
+        "positive": true
+      },
+      {
+        "held_out": "QQQ",
+        "n": 515,
+        "expectancy": 0.0004415051885736441,
+        "positive": true
+      },
+      {
+        "held_out": "SPY",
+        "n": 514,
+        "expectancy": 0.0005777333118856009,
+        "positive": true
+      },
+      {
+        "held_out": "WMT",
+        "n": 509,
+        "expectancy": 0.0007344306213563,
+        "positive": true
+      },
+      {
+        "held_out": "XOM",
+        "n": 514,
+        "expectancy": 0.0007469773645067653,
+        "positive": true
+      }
+    ],
+    "pre_yahoo_instruments": [
+      {
+        "instrument": "QQQ",
+        "n": 25,
+        "expectancy": 0.005096509353360462,
+        "win_rate": 0.6,
+        "profit_factor": 3.251979994091409,
+        "max_drawdown": 0.02942743272674564,
+        "total_pnl": 0.12741273383401155,
+        "pnl_share": 0.5208232142965742
+      },
+      {
+        "instrument": "META",
+        "n": 27,
+        "expectancy": 0.003019792610573913,
+        "win_rate": 0.48148148148148145,
+        "profit_factor": 2.019389160298764,
+        "max_drawdown": 0.02878485647294019,
+        "total_pnl": 0.08153440048549564,
+        "pnl_share": 0.3332870056137543
+      },
+      {
+        "instrument": "AAPL",
+        "n": 36,
+        "expectancy": 0.002253581601380481,
+        "win_rate": 0.4444444444444444,
+        "profit_factor": 1.6416136340937681,
+        "max_drawdown": 0.02377098197338288,
+        "total_pnl": 0.08112893764969732,
+        "pnl_share": 0.3316296009645974
+      },
+      {
+        "instrument": "MSFT",
+        "n": 22,
+        "expectancy": 0.0019703066536580615,
+        "win_rate": 0.5,
+        "profit_factor": 1.5192976920275598,
+        "max_drawdown": 0.032016554387457354,
+        "total_pnl": 0.04334674638047735,
+        "pnl_share": 0.17718787675170478
+      },
+      {
+        "instrument": "SPY",
+        "n": 27,
+        "expectancy": 0.0010923452576338008,
+        "win_rate": 0.48148148148148145,
+        "profit_factor": 1.4076038116816942,
+        "max_drawdown": 0.022195796398891247,
+        "total_pnl": 0.029493321956112623,
+        "pnl_share": 0.12055943137895285
+      },
+      {
+        "instrument": "JPM",
+        "n": 30,
+        "expectancy": 0.0004094918655619332,
+        "win_rate": 0.6,
+        "profit_factor": 1.1571776402407423,
+        "max_drawdown": 0.028075119378317567,
+        "total_pnl": 0.012284755966857991,
+        "pnl_share": 0.05021622169918519
+      },
+      {
+        "instrument": "DIS",
+        "n": 37,
+        "expectancy": 0.0002083539815553647,
+        "win_rate": 0.5135135135135135,
+        "profit_factor": 1.0675217673351487,
+        "max_drawdown": 0.033503814613255224,
+        "total_pnl": 0.007709097317548501,
+        "pnl_share": 0.03151236711929749
+      },
+      {
+        "instrument": "XOM",
+        "n": 23,
+        "expectancy": -0.00023949399028823446,
+        "win_rate": 0.5652173913043478,
+        "profit_factor": 0.9272883066217198,
+        "max_drawdown": 0.046182203439936904,
+        "total_pnl": -0.005508361776629386,
+        "pnl_share": -0.022516451846563274
+      },
+      {
+        "instrument": "BA",
+        "n": 20,
+        "expectancy": -0.00028718285874037,
+        "win_rate": 0.45,
+        "profit_factor": 0.925899586701095,
+        "max_drawdown": 0.024992253167767545,
+        "total_pnl": -0.0057436571748074,
+        "pnl_share": -0.0234782654887375
+      },
+      {
+        "instrument": "GOOGL",
+        "n": 23,
+        "expectancy": -0.0003253894587928091,
+        "win_rate": 0.391304347826087,
+        "profit_factor": 0.9159636219679497,
+        "max_drawdown": 0.02823751615783892,
+        "total_pnl": -0.00748395755223461,
+        "pnl_share": -0.030592066512691585
+      },
+      {
+        "instrument": "WMT",
+        "n": 29,
+        "expectancy": -0.0004917583798060729,
+        "win_rate": 0.41379310344827586,
+        "profit_factor": 0.8617262585655204,
+        "max_drawdown": 0.0667623816924893,
+        "total_pnl": -0.014260993014376127,
+        "pnl_share": -0.05829445768336288
+      },
+      {
+        "instrument": "JNJ",
+        "n": 16,
+        "expectancy": -0.001543922767611061,
+        "win_rate": 0.25,
+        "profit_factor": 0.7096358453288978,
+        "max_drawdown": 0.04294543491960656,
+        "total_pnl": -0.024702764281776975,
+        "pnl_share": -0.10097713712042884
+      },
+      {
+        "instrument": "NVDA",
+        "n": 32,
+        "expectancy": -0.001251400695001431,
+        "win_rate": 0.4375,
+        "profit_factor": 0.7158241900489787,
+        "max_drawdown": 0.0612577260263948,
+        "total_pnl": -0.04004482224004579,
+        "pnl_share": -0.16369064855139473
+      },
+      {
+        "instrument": "AMZN",
+        "n": 27,
+        "expectancy": -0.0015010457645473348,
+        "win_rate": 0.37037037037037035,
+        "profit_factor": 0.5424468137778485,
+        "max_drawdown": 0.06341296010116056,
+        "total_pnl": -0.04052823564277805,
+        "pnl_share": -0.16566669062088726
+      }
+    ]
+  },
+  "phase6_perturbations": {
+    "frozen_baseline_expectancy": 0.0018198705477921937,
+    "frozen_baseline_n": 196,
+    "diagnostic_universe": [
+      "SPY",
+      "QQQ",
+      "AAPL",
+      "GOOGL",
+      "META"
+    ],
+    "rows": [
+      {
+        "perturbation": "htf_adx_weak=15.0",
+        "n": 230,
+        "expectancy": 0.0017000466736354393,
+        "delta_vs_frozen": -0.00011982387415675438,
+        "positive": true,
+        "collapsed": false
+      },
+      {
+        "perturbation": "htf_adx_weak=21.0",
+        "n": 157,
+        "expectancy": 0.0013295657793986166,
+        "delta_vs_frozen": -0.0004903047683935771,
+        "positive": true,
+        "collapsed": false
+      },
+      {
+        "perturbation": "pivot=1",
+        "n": 182,
+        "expectancy": 0.0011659186560481196,
+        "delta_vs_frozen": -0.000653951891744074,
+        "positive": true,
+        "collapsed": false
+      },
+      {
+        "perturbation": "fvg_max_age=20",
+        "n": 180,
+        "expectancy": 0.0016992352509804898,
+        "delta_vs_frozen": -0.00012063529681170392,
+        "positive": true,
+        "collapsed": false
+      },
+      {
+        "perturbation": "stop_atr_mult=1.25",
+        "n": 202,
+        "expectancy": 0.0014472407235298313,
+        "delta_vs_frozen": -0.00037262982426236233,
+        "positive": true,
+        "collapsed": false,
+        "note": "Corrected: patches V2_ATR_STOP_MULT used by _adaptive_exit"
+      },
+      {
+        "perturbation": "stop_atr_mult=1.75",
+        "n": 194,
+        "expectancy": 0.001557621994829914,
+        "delta_vs_frozen": -0.0002622485529622798,
+        "positive": true,
+        "collapsed": false,
+        "note": "Corrected: patches V2_ATR_STOP_MULT used by _adaptive_exit"
+      }
+    ],
+    "any_collapse": false,
+    "note": "Diagnostic only on DEV subset. Stop perturbations patch V2_ATR_STOP_MULT (used by _adaptive_exit). Frozen E3 remains the candidate regardless."
+  },
+  "phase7_cost_stress": {
+    "rows": [
+      {
+        "cost_mult": 1.0,
+        "all_history": {
+          "label": "x",
+          "signals": 551,
+          "wins": 261,
+          "losses": 290,
+          "win_rate": 0.47368421052631576,
+          "avg_return": 0.0007075164679643255,
+          "median_return": -0.0004211923245923004,
+          "avg_winner": 0.00856252691570846,
+          "avg_loser": -0.006361992935005395,
+          "profit_factor": 1.2112987711343755,
+          "max_drawdown": 0.1447273580210662,
+          "total_net_return": 0.3898415738483434,
+          "cumulative_return": 0.43535922644569847,
+          "reliable": true,
+          "note": "Sample size meets the minimum threshold.",
+          "expectancy": 0.0007075164679643255,
+          "total_return": 0.43535922644569847,
+          "n": 551,
+          "avg_win": 0.00856252691570846,
+          "avg_loss": -0.006361992935005395,
+          "max_losing_streak": 9,
+          "avg_cost": 0.000576368315745001,
+          "gross_expectancy": 0.0012838847837093265,
+          "long_short": {
+            "bullish": {
+              "n": 338,
+              "win_rate": 0.5088757396449705,
+              "expectancy": 0.0012271345632192026,
+              "max_drawdown": 0.0862780937376468,
+              "profit_factor": 1.3698700024658015
+            },
+            "bearish": {
+              "n": 213,
+              "win_rate": 0.41784037558685444,
+              "expectancy": -0.0001170418240363714,
+              "max_drawdown": 0.11863421096346927,
+              "profit_factor": 0.9655464353245724
+            }
+          },
+          "regime": {
+            "range": {
+              "n": 370,
+              "expectancy": 0.0011170071875677313,
+              "win_rate": 0.4756756756756757
+            },
+            "strong_trend_bear": {
+              "n": 20,
+              "expectancy": -0.0018493145401392522,
+              "win_rate": 0.3
+            },
+            "strong_trend_bull": {
+              "n": 54,
+              "expectancy": 0.001716318806326274,
+              "win_rate": 0.5370370370370371
+            },
+            "volatility_contraction": {
+              "n": 36,
+              "expectancy": -0.002173486672391393,
+              "win_rate": 0.4166666666666667
+            },
+            "volatility_expansion": {
+              "n": 54,
+              "expectancy": 0.0007281564701259684,
+              "win_rate": 0.5370370370370371
+            },
+            "weak_trend_bear": {
+              "n": 7,
+              "expectancy": 0.0006712173707262564,
+              "win_rate": 0.5714285714285714
+            },
+            "weak_trend_bull": {
+              "n": 10,
+              "expectancy": -0.004491946106634686,
+              "win_rate": 0.2
+            }
+          }
+        },
+        "val_window": {
+          "label": "x",
+          "signals": 72,
+          "wins": 36,
+          "losses": 36,
+          "win_rate": 0.5,
+          "avg_return": 0.0008960993510709849,
+          "median_return": 0.00014394072017632158,
+          "avg_winner": 0.008106414854356802,
+          "avg_loser": -0.006314216152214832,
+          "profit_factor": 1.283835500549553,
+          "max_drawdown": 0.06841292237040551,
+          "total_net_return": 0.06451915327711091,
+          "cumulative_return": 0.06306212130091748,
+          "reliable": true,
+          "note": "Sample size meets the minimum threshold.",
+          "expectancy": 0.0008960993510709849,
+          "total_return": 0.06306212130091748,
+          "n": 72,
+          "avg_win": 0.008106414854356802,
+          "avg_loss": -0.006314216152214832,
+          "max_losing_streak": 6,
+          "avg_cost": 0.0004888459318086549,
+          "gross_expectancy": 0.00138494528287964,
+          "long_short": {
+            "bullish": {
+              "n": 45,
+              "win_rate": 0.5111111111111111,
+              "expectancy": 0.0015065143015793358,
+              "max_drawdown": 0.05561464012821972,
+              "profit_factor": 1.4968110400790717
+            },
+            "bearish": {
+              "n": 27,
+              "win_rate": 0.48148148148148145,
+              "expectancy": -0.00012125889977626673,
+              "max_drawdown": 0.06055459712784644,
+              "profit_factor": 0.9639647391592352
+            }
+          },
+          "regime": {
+            "range": {
+              "n": 43,
+              "expectancy": 0.001479994646129249,
+              "win_rate": 0.5581395348837209
+            },
+            "strong_trend_bear": {
+              "n": 8,
+              "expectancy": 0.0010024349239550739,
+              "win_rate": 0.375
+            },
+            "strong_trend_bull": {
+              "n": 11,
+              "expectancy": 0.000371674355097682,
+              "win_rate": 0.36363636363636365
+            },
+            "volatility_contraction": {
+              "n": 3,
+              "expectancy": -0.005596126385695254,
+              "win_rate": 0.3333333333333333
+            },
+            "volatility_expansion": {
+              "n": 2,
+              "expectancy": 0.002585236493457673,
+              "win_rate": 1.0
+            },
+            "weak_trend_bear": {
+              "n": 2,
+              "expectancy": -0.0017418899114825998,
+              "win_rate": 0.5
+            },
+            "weak_trend_bull": {
+              "n": 3,
+              "expectancy": 0.0012910573963245788,
+              "win_rate": 0.3333333333333333
+            }
+          }
+        },
+        "pre_yahoo": {
+          "label": "x",
+          "signals": 374,
+          "wins": 176,
+          "losses": 198,
+          "win_rate": 0.47058823529411764,
+          "avg_return": 0.0006541101655282159,
+          "median_return": -0.0005450660784615681,
+          "avg_winner": 0.008612676603913082,
+          "avg_loser": -0.006420171113036109,
+          "profit_factor": 1.1924468058595452,
+          "max_drawdown": 0.13747754974159443,
+          "total_net_return": 0.24463720190755273,
+          "cumulative_return": 0.2524005041271733,
+          "reliable": true,
+          "note": "Sample size meets the minimum threshold.",
+          "expectancy": 0.0006541101655282159,
+          "total_return": 0.2524005041271733,
+          "n": 374,
+          "avg_win": 0.008612676603913082,
+          "avg_loss": -0.006420171113036109,
+          "max_losing_streak": 9,
+          "avg_cost": 0.000580372642815909,
+          "gross_expectancy": 0.0012344828083441248,
+          "long_short": {
+            "bullish": {
+              "n": 228,
+              "win_rate": 0.5043859649122807,
+              "expectancy": 0.001217762916190951,
+              "max_drawdown": 0.08407883897009549,
+              "profit_factor": 1.3479607116191732
+            },
+            "bearish": {
+              "n": 146,
+              "win_rate": 0.4178082191780822,
+              "expectancy": -0.00022611467797249384,
+              "max_drawdown": 0.11863421096346927,
+              "profit_factor": 0.9302438322758682
+            }
+          },
+          "regime": {
+            "range": {
+              "n": 253,
+              "expectancy": 0.0010368154900224963,
+              "win_rate": 0.4743083003952569
+            },
+            "strong_trend_bear": {
+              "n": 14,
+              "expectancy": 0.000165189660349524,
+              "win_rate": 0.35714285714285715
+            },
+            "strong_trend_bull": {
+              "n": 33,
+              "expectancy": 0.002684024533975404,
+              "win_rate": 0.5454545454545454
+            },
+            "volatility_contraction": {
+              "n": 24,
+              "expectancy": -0.003221496472372683,
+              "win_rate": 0.375
+            },
+            "volatility_expansion": {
+              "n": 41,
+              "expectancy": -0.0005746679611078199,
+              "win_rate": 0.4878048780487805
+            },
+            "weak_trend_bear": {
+              "n": 4,
+              "expectancy": -0.0014970154103427103,
+              "win_rate": 0.5
+            },
+            "weak_trend_bull": {
+              "n": 5,
+              "expectancy": -0.0003394437100969417,
+              "win_rate": 0.4
+            }
+          }
+        },
+        "post_yahoo": {
+          "label": "x",
+          "signals": 177,
+          "wins": 85,
+          "losses": 92,
+          "win_rate": 0.480225988700565,
+          "avg_return": 0.0008203636832813032,
+          "median_return": -0.0003188316325667176,
+          "avg_winner": 0.0084586875613083,
+          "avg_loser": -0.006236783377939294,
+          "profit_factor": 1.253064487736346,
+          "max_drawdown": 0.09505254393454998,
+          "total_net_return": 0.14520437194079067,
+          "cumulative_return": 0.14608643298657298,
+          "reliable": true,
+          "note": "Sample size meets the minimum threshold.",
+          "expectancy": 0.0008203636832813032,
+          "total_return": 0.14608643298657298,
+          "n": 177,
+          "avg_win": 0.0084586875613083,
+          "avg_loss": -0.006236783377939294,
+          "max_losing_streak": 6,
+          "avg_cost": 0.0005679071952674887,
+          "gross_expectancy": 0.0013882708785487921,
+          "long_short": {
+            "bullish": {
+              "n": 110,
+              "win_rate": 0.5181818181818182,
+              "expectancy": 0.0012465594316050331,
+              "max_drawdown": 0.06276290030616427,
+              "profit_factor": 1.4239168984762332
+            },
+            "bearish": {
+              "n": 67,
+              "win_rate": 0.417910447761194,
+              "expectancy": 0.00012063932036174617,
+              "max_drawdown": 0.058489824974419555,
+              "profit_factor": 1.032289900702224
+            }
+          },
+          "regime": {
+            "range": {
+              "n": 117,
+              "expectancy": 0.0012904131660202473,
+              "win_rate": 0.47863247863247865
+            },
+            "strong_trend_bear": {
+              "n": 6,
+              "expectancy": -0.00654982434127973,
+              "win_rate": 0.16666666666666666
+            },
+            "strong_trend_bull": {
+              "n": 21,
+              "expectancy": 0.0001956383771633569,
+              "win_rate": 0.5238095238095238
+            },
+            "volatility_contraction": {
+              "n": 12,
+              "expectancy": -7.746707242881241e-05,
+              "win_rate": 0.5
+            },
+            "volatility_expansion": {
+              "n": 13,
+              "expectancy": 0.0048370642917094555,
+              "win_rate": 0.6923076923076923
+            },
+            "weak_trend_bear": {
+              "n": 3,
+              "expectancy": 0.0035621944121515454,
+              "win_rate": 0.6666666666666666
+            },
+            "weak_trend_bull": {
+              "n": 5,
+              "expectancy": -0.008644448503172432,
+              "win_rate": 0.0
+            }
+          }
+        }
+      },
+      {
+        "cost_mult": 1.5,
+        "all_history": {
+          "label": "x",
+          "signals": 551,
+          "wins": 248,
+          "losses": 303,
+          "win_rate": 0.4500907441016334,
+          "avg_return": 0.00041933231009182517,
+          "median_return": -0.0006759313056410124,
+          "avg_winner": 0.008723116306647252,
+          "avg_loser": -0.006377164162336381,
+          "profit_factor": 1.1195748101896155,
+          "max_drawdown": 0.16354802912358635,
+          "total_net_return": 0.23105210286059566,
+          "cumulative_return": 0.2246845085235165,
+          "reliable": true,
+          "note": "Sample size meets the minimum threshold.",
+          "expectancy": 0.00041933231009182517,
+          "total_return": 0.2246845085235165,
+          "n": 551,
+          "avg_win": 0.008723116306647252,
+          "avg_loss": -0.006377164162336381,
+          "max_losing_streak": 9,
+          "avg_cost": 0.0008645524736175014,
+          "gross_expectancy": 0.0012838847837093265,
+          "long_short": {
+            "bullish": {
+              "n": 338,
+              "win_rate": 0.48520710059171596,
+              "expectancy": 0.0008971071416914129,
+              "max_drawdown": 0.10524141562058975,
+              "profit_factor": 1.2567461466968115
+            },
+            "bearish": {
+              "n": 213,
+              "win_rate": 0.39436619718309857,
+              "expectancy": -0.00033882681235259104,
+              "max_drawdown": 0.1383510772583214,
+              "profit_factor": 0.9039347298882877
+            }
+          },
+          "regime": {
+            "range": {
+              "n": 370,
+              "expectancy": 0.000826689085903715,
+              "win_rate": 0.4540540540540541
+            },
+            "strong_trend_bear": {
+              "n": 20,
+              "expectancy": -0.0020478702794212078,
+              "win_rate": 0.25
+            },
+            "strong_trend_bull": {
+              "n": 54,
+              "expectancy": 0.0014089727297469346,
+              "win_rate": 0.5
+            },
+            "volatility_contraction": {
+              "n": 36,
+              "expectancy": -0.0025887284380121684,
+              "win_rate": 0.3888888888888889
+            },
+            "volatility_expansion": {
+              "n": 54,
+              "expectancy": 0.0005151605724117636,
+              "win_rate": 0.5185185185185185
+            },
+            "weak_trend_bear": {
+              "n": 7,
+              "expectancy": 0.0004670344402335969,
+              "win_rate": 0.5714285714285714
+            },
+            "weak_trend_bull": {
+              "n": 10,
+              "expectancy": -0.004784366896512161,
+              "win_rate": 0.2
+            }
+          }
+        },
+        "val_window": {
+          "label": "x",
+          "signals": 72,
+          "wins": 36,
+          "losses": 36,
+          "win_rate": 0.5,
+          "avg_return": 0.0006516763851666576,
+          "median_return": 2.3873874391431785e-05,
+          "avg_winner": 0.00786788328041059,
+          "avg_loser": -0.006564530510077274,
+          "profit_factor": 1.1985447045043858,
+          "max_drawdown": 0.07317199832926945,
+          "total_net_return": 0.046920699731999346,
+          "cumulative_return": 0.04453752834157432,
+          "reliable": true,
+          "note": "Sample size meets the minimum threshold.",
+          "expectancy": 0.0006516763851666576,
+          "total_return": 0.04453752834157432,
+          "n": 72,
+          "avg_win": 0.00786788328041059,
+          "avg_loss": -0.006564530510077274,
+          "max_losing_streak": 6,
+          "avg_cost": 0.0007332688977129824,
+          "gross_expectancy": 0.00138494528287964,
+          "long_short": {
+            "bullish": {
+              "n": 45,
+              "win_rate": 0.5111111111111111,
+              "expectancy": 0.0012365003699972808,
+              "max_drawdown": 0.05866720479473477,
+              "profit_factor": 1.3892422211949347
+            },
+            "bearish": {
+              "n": 27,
+              "win_rate": 0.48148148148148145,
+              "expectancy": -0.0003230302562177144,
+              "max_drawdown": 0.06438434660160894,
+              "profit_factor": 0.9065908818051067
+            }
+          },
+          "regime": {
+            "range": {
+              "n": 43,
+              "expectancy": 0.0012351407963590323,
+              "win_rate": 0.5581395348837209
+            },
+            "strong_trend_bear": {
+              "n": 8,
+              "expectancy": 0.0008116047088514034,
+              "win_rate": 0.375
+            },
+            "strong_trend_bull": {
+              "n": 11,
+              "expectancy": 9.518975309924768e-05,
+              "win_rate": 0.36363636363636365
+            },
+            "volatility_contraction": {
+              "n": 3,
+              "expectancy": -0.005858098218922127,
+              "win_rate": 0.3333333333333333
+            },
+            "volatility_expansion": {
+              "n": 2,
+              "expectancy": 0.0024160671001507593,
+              "win_rate": 1.0
+            },
+            "weak_trend_bear": {
+              "n": 2,
+              "expectancy": -0.0020240409379252066,
+              "win_rate": 0.5
+            },
+            "weak_trend_bull": {
+              "n": 3,
+              "expectancy": 0.001019987621991093,
+              "win_rate": 0.3333333333333333
+            }
+          }
+        },
+        "pre_yahoo": {
+          "label": "x",
+          "signals": 374,
+          "wins": 169,
+          "losses": 205,
+          "win_rate": 0.45187165775401067,
+          "avg_return": 0.0003639238441202613,
+          "median_return": -0.000710379701528584,
+          "avg_winner": 0.008684156919697275,
+          "avg_loser": -0.0064951951303798125,
+          "profit_factor": 1.1022200407238039,
+          "max_drawdown": 0.16354802912358635,
+          "total_net_return": 0.13610751770097773,
+          "cumulative_return": 0.12362111989198499,
+          "reliable": true,
+          "note": "Sample size meets the minimum threshold.",
+          "expectancy": 0.0003639238441202613,
+          "total_return": 0.12362111989198499,
+          "n": 374,
+          "avg_win": 0.008684156919697275,
+          "avg_loss": -0.0064951951303798125,
+          "max_losing_streak": 9,
+          "avg_cost": 0.0008705589642238637,
+          "gross_expectancy": 0.001234482808344125,
+          "long_short": {
+            "bullish": {
+              "n": 228,
+              "win_rate": 0.4868421052631579,
+              "expectancy": 0.0008825859860691561,
+              "max_drawdown": 0.10524141562058975,
+              "profit_factor": 1.2398495207741744
+            },
+            "bearish": {
+              "n": 146,
+              "win_rate": 0.3972602739726027,
+              "expectancy": -0.0004460416926218483,
+              "max_drawdown": 0.1383510772583214,
+              "profit_factor": 0.8677810767694499
+            }
+          },
+          "regime": {
+            "range": {
+              "n": 253,
+              "expectancy": 0.0007448404298873018,
+              "win_rate": 0.4624505928853755
+            },
+            "strong_trend_bear": {
+              "n": 14,
+              "expectancy": -2.002313374434592e-05,
+              "win_rate": 0.2857142857142857
+            },
+            "strong_trend_bull": {
+              "n": 33,
+              "expectancy": 0.002360703751934397,
+              "win_rate": 0.48484848484848486
+            },
+            "volatility_contraction": {
+              "n": 24,
+              "expectancy": -0.0036466442872073557,
+              "win_rate": 0.3333333333333333
+            },
+            "volatility_expansion": {
+              "n": 41,
+              "expectancy": -0.0007976286701656766,
+              "win_rate": 0.4878048780487805
+            },
+            "weak_trend_bear": {
+              "n": 4,
+              "expectancy": -0.001651723101164701,
+              "win_rate": 0.5
+            },
+            "weak_trend_bull": {
+              "n": 5,
+              "expectancy": -0.0006261760454991695,
+              "win_rate": 0.4
+            }
+          }
+        },
+        "post_yahoo": {
+          "label": "x",
+          "signals": 177,
+          "wins": 79,
+          "losses": 98,
+          "win_rate": 0.4463276836158192,
+          "avg_return": 0.0005364100856475589,
+          "median_return": -0.0005532082760670013,
+          "avg_winner": 0.008806459805312394,
+          "avg_loser": -0.006130262647551647,
+          "profit_factor": 1.1580392804106128,
+          "max_drawdown": 0.1010189204737092,
+          "total_net_return": 0.09494458515961793,
+          "cumulative_return": 0.08994436544700313,
+          "reliable": true,
+          "note": "Sample size meets the minimum threshold.",
+          "expectancy": 0.0005364100856475589,
+          "total_return": 0.08994436544700313,
+          "n": 177,
+          "avg_win": 0.008806459805312394,
+          "avg_loss": -0.006130262647551647,
+          "max_losing_streak": 8,
+          "avg_cost": 0.000851860792901233,
+          "gross_expectancy": 0.001388270878548792,
+          "long_short": {
+            "bullish": {
+              "n": 110,
+              "win_rate": 0.4818181818181818,
+              "expectancy": 0.0009272055369811814,
+              "max_drawdown": 0.06687847321019402,
+              "profit_factor": 1.2981919123609071
+            },
+            "bearish": {
+              "n": 67,
+              "win_rate": 0.3880597014925373,
+              "expectancy": -0.00010519438669122438,
+              "max_drawdown": 0.06433929295615577,
+              "profit_factor": 0.9727590424666521
+            }
+          },
+          "regime": {
+            "range": {
+              "n": 117,
+              "expectancy": 0.0010036780600246769,
+              "win_rate": 0.4358974358974359
+            },
+            "strong_trend_bear": {
+              "n": 6,
+              "expectancy": -0.006779513619333886,
+              "win_rate": 0.16666666666666666
+            },
+            "strong_trend_bull": {
+              "n": 21,
+              "expectancy": -8.660459083336219e-05,
+              "win_rate": 0.5238095238095238
+            },
+            "volatility_contraction": {
+              "n": 12,
+              "expectancy": -0.00047289673962179485,
+              "win_rate": 0.5
+            },
+            "volatility_expansion": {
+              "n": 13,
+              "expectancy": 0.00465549587592523,
+              "win_rate": 0.6153846153846154
+            },
+            "weak_trend_bear": {
+              "n": 3,
+              "expectancy": 0.0032920444954313275,
+              "win_rate": 0.6666666666666666
+            },
+            "weak_trend_bull": {
+              "n": 5,
+              "expectancy": -0.008942557747525151,
+              "win_rate": 0.0
+            }
+          }
+        }
+      },
+      {
+        "cost_mult": 2.0,
+        "all_history": {
+          "label": "x",
+          "signals": 551,
+          "wins": 241,
+          "losses": 310,
+          "win_rate": 0.43738656987295826,
+          "avg_return": 0.00013114815221932467,
+          "median_return": -0.0008319398893232189,
+          "avg_winner": 0.008695009469255655,
+          "avg_loser": -0.006526563387799243,
+          "profit_factor": 1.0357163870562764,
+          "max_drawdown": 0.1888536645197726,
+          "total_net_return": 0.0722626318728479,
+          "cumulative_return": 0.044867141784155073,
+          "reliable": true,
+          "note": "Sample size meets the minimum threshold.",
+          "expectancy": 0.00013114815221932467,
+          "total_return": 0.044867141784155073,
+          "n": 551,
+          "avg_win": 0.008695009469255655,
+          "avg_loss": -0.006526563387799243,
+          "max_losing_streak": 9,
+          "avg_cost": 0.001152736631490002,
+          "gross_expectancy": 0.0012838847837093265,
+          "long_short": {
+            "bullish": {
+              "n": 338,
+              "win_rate": 0.46745562130177515,
+              "expectancy": 0.0005670797201636231,
+              "max_drawdown": 0.125925776606588,
+              "profit_factor": 1.1541005704843426
+            },
+            "bearish": {
+              "n": 213,
+              "win_rate": 0.38967136150234744,
+              "expectancy": -0.0005606118006688108,
+              "max_drawdown": 0.1576328792274585,
+              "profit_factor": 0.8467954254870149
+            }
+          },
+          "regime": {
+            "range": {
+              "n": 370,
+              "expectancy": 0.0005363709842396986,
+              "win_rate": 0.44054054054054054
+            },
+            "strong_trend_bear": {
+              "n": 20,
+              "expectancy": -0.0022464260187031624,
+              "win_rate": 0.25
+            },
+            "strong_trend_bull": {
+              "n": 54,
+              "expectancy": 0.0011016266531675952,
+              "win_rate": 0.5
+            },
+            "volatility_contraction": {
+              "n": 36,
+              "expectancy": -0.0030039702036329437,
+              "win_rate": 0.3611111111111111
+            },
+            "volatility_expansion": {
+              "n": 54,
+              "expectancy": 0.00030216467469755884,
+              "win_rate": 0.5
+            },
+            "weak_trend_bear": {
+              "n": 7,
+              "expectancy": 0.00026285150974093705,
+              "win_rate": 0.5714285714285714
+            },
+            "weak_trend_bull": {
+              "n": 10,
+              "expectancy": -0.0050767876863896345,
+              "win_rate": 0.2
+            }
+          }
+        },
+        "val_window": {
+          "label": "x",
+          "signals": 72,
+          "wins": 36,
+          "losses": 36,
+          "win_rate": 0.5,
+          "avg_return": 0.0004072534192623298,
+          "median_return": -7.326289043133433e-05,
+          "avg_winner": 0.007629351706464376,
+          "avg_loser": -0.006814844867939716,
+          "profit_factor": 1.1195194981409613,
+          "max_drawdown": 0.07825951397847225,
+          "total_net_return": 0.029322246186887748,
+          "cumulative_return": 0.02633035957607377,
+          "reliable": true,
+          "note": "Sample size meets the minimum threshold.",
+          "expectancy": 0.0004072534192623298,
+          "total_return": 0.02633035957607377,
+          "n": 72,
+          "avg_win": 0.007629351706464376,
+          "avg_loss": -0.006814844867939716,
+          "max_losing_streak": 6,
+          "avg_cost": 0.0009776918636173098,
+          "gross_expectancy": 0.00138494528287964,
+          "long_short": {
+            "bullish": {
+              "n": 45,
+              "win_rate": 0.5111111111111111,
+              "expectancy": 0.0009664864384152253,
+              "max_drawdown": 0.06171140252398344,
+              "profit_factor": 1.2910224109768553
+            },
+            "bearish": {
+              "n": 27,
+              "win_rate": 0.48148148148148145,
+              "expectancy": -0.0005248016126591624,
+              "max_drawdown": 0.0681992494523154,
+              "profit_factor": 0.8522290847321601
+            }
+          },
+          "regime": {
+            "range": {
+              "n": 43,
+              "expectancy": 0.0009902869465888153,
+              "win_rate": 0.5581395348837209
+            },
+            "strong_trend_bear": {
+              "n": 8,
+              "expectancy": 0.0006207744937477338,
+              "win_rate": 0.375
+            },
+            "strong_trend_bull": {
+              "n": 11,
+              "expectancy": -0.00018129484889918676,
+              "win_rate": 0.36363636363636365
+            },
+            "volatility_contraction": {
+              "n": 3,
+              "expectancy": -0.006120070052149001,
+              "win_rate": 0.3333333333333333
+            },
+            "volatility_expansion": {
+              "n": 2,
+              "expectancy": 0.0022468977068438455,
+              "win_rate": 1.0
+            },
+            "weak_trend_bear": {
+              "n": 2,
+              "expectancy": -0.002306191964367814,
+              "win_rate": 0.5
+            },
+            "weak_trend_bull": {
+              "n": 3,
+              "expectancy": 0.0007489178476576059,
+              "win_rate": 0.3333333333333333
+            }
+          }
+        },
+        "pre_yahoo": {
+          "label": "x",
+          "signals": 374,
+          "wins": 165,
+          "losses": 209,
+          "win_rate": 0.4411764705882353,
+          "avg_return": 7.373752271230664e-05,
+          "median_return": -0.0010773706867934045,
+          "avg_winner": 0.008614306407326579,
+          "avg_loser": -0.0066688168598779095,
+          "profit_factor": 1.01978632180266,
+          "max_drawdown": 0.1888536645197726,
+          "total_net_return": 0.02757783349440268,
+          "cumulative_return": 0.008039444127748485,
+          "reliable": true,
+          "note": "Sample size meets the minimum threshold.",
+          "expectancy": 7.373752271230664e-05,
+          "total_return": 0.008039444127748485,
+          "n": 374,
+          "avg_win": 0.008614306407326579,
+          "avg_loss": -0.0066688168598779095,
+          "max_losing_streak": 9,
+          "avg_cost": 0.001160745285631818,
+          "gross_expectancy": 0.001234482808344125,
+          "long_short": {
+            "bullish": {
+              "n": 228,
+              "win_rate": 0.47368421052631576,
+              "expectancy": 0.000547409055947361,
+              "max_drawdown": 0.125925776606588,
+              "profit_factor": 1.141538145967931
+            },
+            "bearish": {
+              "n": 146,
+              "win_rate": 0.3904109589041096,
+              "expectancy": -0.0006659687072712033,
+              "max_drawdown": 0.1576328792274585,
+              "profit_factor": 0.8100860215496997
+            }
+          },
+          "regime": {
+            "range": {
+              "n": 253,
+              "expectancy": 0.00045286536975210734,
+              "win_rate": 0.45454545454545453
+            },
+            "strong_trend_bear": {
+              "n": 14,
+              "expectancy": -0.00020523592783821529,
+              "win_rate": 0.2857142857142857
+            },
+            "strong_trend_bull": {
+              "n": 33,
+              "expectancy": 0.0020373829698933895,
+              "win_rate": 0.48484848484848486
+            },
+            "volatility_contraction": {
+              "n": 24,
+              "expectancy": -0.004071792102042028,
+              "win_rate": 0.2916666666666667
+            },
+            "volatility_expansion": {
+              "n": 41,
+              "expectancy": -0.0010205893792235338,
+              "win_rate": 0.4634146341463415
+            },
+            "weak_trend_bear": {
+              "n": 4,
+              "expectancy": -0.0018064307919866927,
+              "win_rate": 0.5
+            },
+            "weak_trend_bull": {
+              "n": 5,
+              "expectancy": -0.0009129083809013977,
+              "win_rate": 0.4
+            }
+          }
+        },
+        "post_yahoo": {
+          "label": "x",
+          "signals": 177,
+          "wins": 76,
+          "losses": 101,
+          "win_rate": 0.4293785310734463,
+          "avg_return": 0.00025245648801381477,
+          "median_return": -0.0007781575532279828,
+          "avg_winner": 0.008870220064233252,
+          "avg_loser": -0.006232197292111704,
+          "profit_factor": 1.070990009716353,
+          "max_drawdown": 0.10694846099093436,
+          "total_net_return": 0.04468479837844522,
+          "cumulative_return": 0.03653398472742597,
+          "reliable": true,
+          "note": "Sample size meets the minimum threshold.",
+          "expectancy": 0.00025245648801381477,
+          "total_return": 0.03653398472742597,
+          "n": 177,
+          "avg_win": 0.008870220064233252,
+          "avg_loss": -0.006232197292111704,
+          "max_losing_streak": 8,
+          "avg_cost": 0.0011358143905349774,
+          "gross_expectancy": 0.0013882708785487921,
+          "long_short": {
+            "bullish": {
+              "n": 110,
+              "win_rate": 0.45454545454545453,
+              "expectancy": 0.0006078516423573294,
+              "max_drawdown": 0.07097800928946763,
+              "profit_factor": 1.1847008507231072
+            },
+            "bearish": {
+              "n": 67,
+              "win_rate": 0.3880597014925373,
+              "expectancy": -0.0003310280937441945,
+              "max_drawdown": 0.07015397467649612,
+              "profit_factor": 0.9170700757181035
+            }
+          },
+          "regime": {
+            "range": {
+              "n": 117,
+              "expectancy": 0.0007169429540291065,
+              "win_rate": 0.41025641025641024
+            },
+            "strong_trend_bear": {
+              "n": 6,
+              "expectancy": -0.007009202897388041,
+              "win_rate": 0.16666666666666666
+            },
+            "strong_trend_bull": {
+              "n": 21,
+              "expectancy": -0.0003688475588300819,
+              "win_rate": 0.5238095238095238
+            },
+            "volatility_contraction": {
+              "n": 12,
+              "expectancy": -0.0008683264068147763,
+              "win_rate": 0.5
+            },
+            "volatility_expansion": {
+              "n": 13,
+              "expectancy": 0.004473927460141004,
+              "win_rate": 0.6153846153846154
+            },
+            "weak_trend_bear": {
+              "n": 3,
+              "expectancy": 0.0030218945787111105,
+              "win_rate": 0.6666666666666666
+            },
+            "weak_trend_bull": {
+              "n": 5,
+              "expectancy": -0.009240666991877875,
+              "win_rate": 0.0
+            }
+          }
+        }
+      },
+      {
+        "cost_mult": 3.0,
+        "all_history": {
+          "label": "x",
+          "signals": 551,
+          "wins": 229,
+          "losses": 322,
+          "win_rate": 0.41560798548094374,
+          "avg_return": -0.00044522016352567637,
+          "median_return": -0.0014454715303983446,
+          "avg_winner": 0.008587507548456469,
+          "avg_loser": -0.006869116579811113,
+          "profit_factor": 0.8890902657020174,
+          "max_drawdown": 0.28574587686054054,
+          "total_net_return": -0.24531631010264768,
+          "cumulative_return": -0.23957858149924605,
+          "reliable": true,
+          "note": "Sample size meets the minimum threshold.",
+          "expectancy": -0.00044522016352567637,
+          "total_return": -0.23957858149924605,
+          "n": 551,
+          "avg_win": 0.008587507548456469,
+          "avg_loss": -0.006869116579811113,
+          "max_losing_streak": 10,
+          "avg_cost": 0.0017291049472350029,
+          "gross_expectancy": 0.0012838847837093265,
+          "long_short": {
+            "bullish": {
+              "n": 338,
+              "win_rate": 0.4408284023668639,
+              "expectancy": -9.297512289195643e-05,
+              "max_drawdown": 0.16590188552376706,
+              "profit_factor": 0.9771483452310321
+            },
+            "bearish": {
+              "n": 213,
+              "win_rate": 0.3755868544600939,
+              "expectancy": -0.0010041817773012503,
+              "max_drawdown": 0.22050293868002535,
+              "profit_factor": 0.744350377431833
+            }
+          },
+          "regime": {
+            "range": {
+              "n": 370,
+              "expectancy": -4.426521908833364e-05,
+              "win_rate": 0.4189189189189189
+            },
+            "strong_trend_bear": {
+              "n": 20,
+              "expectancy": -0.0026435374972670735,
+              "win_rate": 0.25
+            },
+            "strong_trend_bull": {
+              "n": 54,
+              "expectancy": 0.00048693450000891644,
+              "win_rate": 0.48148148148148145
+            },
+            "volatility_contraction": {
+              "n": 36,
+              "expectancy": -0.0038344537348744953,
+              "win_rate": 0.3055555555555556
+            },
+            "volatility_expansion": {
+              "n": 54,
+              "expectancy": -0.00012382712073085066,
+              "win_rate": 0.48148148148148145
+            },
+            "weak_trend_bear": {
+              "n": 7,
+              "expectancy": -0.00014551435124438234,
+              "win_rate": 0.5714285714285714
+            },
+            "weak_trend_bull": {
+              "n": 10,
+              "expectancy": -0.005661629266144584,
+              "win_rate": 0.2
+            }
+          }
+        },
+        "val_window": {
+          "label": "x",
+          "signals": 72,
+          "wins": 34,
+          "losses": 38,
+          "win_rate": 0.4722222222222222,
+          "avg_return": -8.159251254632504e-05,
+          "median_return": -0.00026753642007686654,
+          "avg_winner": 0.007585339504738875,
+          "avg_loser": -0.006941479054327818,
+          "profit_factor": 0.977728616862271,
+          "max_drawdown": 0.09131675082771501,
+          "total_net_return": -0.005874660903335403,
+          "cumulative_return": -0.00915300817385023,
+          "reliable": true,
+          "note": "Sample size meets the minimum threshold.",
+          "expectancy": -8.159251254632504e-05,
+          "total_return": -0.00915300817385023,
+          "n": 72,
+          "avg_win": 0.007585339504738875,
+          "avg_loss": -0.006941479054327818,
+          "max_losing_streak": 7,
+          "avg_cost": 0.0014665377954259649,
+          "gross_expectancy": 0.0013849452828796395,
+          "long_short": {
+            "bullish": {
+              "n": 45,
+              "win_rate": 0.4888888888888889,
+              "expectancy": 0.0004264585752511147,
+              "max_drawdown": 0.06864946461904825,
+              "profit_factor": 1.1179028130195454
+            },
+            "bearish": {
+              "n": 27,
+              "win_rate": 0.4444444444444444,
+              "expectancy": -0.0009283443255420583,
+              "max_drawdown": 0.07578473349350293,
+              "profit_factor": 0.7518524267872606
+            }
+          },
+          "regime": {
+            "range": {
+              "n": 43,
+              "expectancy": 0.0005005792470483822,
+              "win_rate": 0.5116279069767442
+            },
+            "strong_trend_bear": {
+              "n": 8,
+              "expectancy": 0.00023911406354039377,
+              "win_rate": 0.375
+            },
+            "strong_trend_bull": {
+              "n": 11,
+              "expectancy": -0.0007342640528960558,
+              "win_rate": 0.36363636363636365
+            },
+            "volatility_contraction": {
+              "n": 3,
+              "expectancy": -0.00664401371860275,
+              "win_rate": 0.3333333333333333
+            },
+            "volatility_expansion": {
+              "n": 2,
+              "expectancy": 0.001908558920230018,
+              "win_rate": 1.0
+            },
+            "weak_trend_bear": {
+              "n": 2,
+              "expectancy": -0.002870494017253029,
+              "win_rate": 0.5
+            },
+            "weak_trend_bull": {
+              "n": 3,
+              "expectancy": 0.00020677829899063208,
+              "win_rate": 0.3333333333333333
+            }
+          }
+        },
+        "pre_yahoo": {
+          "label": "x",
+          "signals": 374,
+          "wins": 156,
+          "losses": 218,
+          "win_rate": 0.41711229946524064,
+          "avg_return": -0.0005066351201036024,
+          "median_return": -0.0015209993496798865,
+          "avg_winner": 0.008554249322795936,
+          "avg_loser": -0.006990570776490427,
+          "profit_factor": 0.87566375041057,
+          "max_drawdown": 0.24677676741018972,
+          "total_net_return": -0.1894815349187473,
+          "cumulative_return": -0.18878564942584342,
+          "reliable": true,
+          "note": "Sample size meets the minimum threshold.",
+          "expectancy": -0.0005066351201036024,
+          "total_return": -0.18878564942584342,
+          "n": 374,
+          "avg_win": 0.008554249322795936,
+          "avg_loss": -0.006990570776490427,
+          "max_losing_streak": 10,
+          "avg_cost": 0.0017411179284477275,
+          "gross_expectancy": 0.0012344828083441248,
+          "long_short": {
+            "bullish": {
+              "n": 228,
+              "win_rate": 0.43859649122807015,
+              "expectancy": -0.0001229448042962283,
+              "max_drawdown": 0.16590188552376706,
+              "profit_factor": 0.9711708676732407
+            },
+            "bearish": {
+              "n": 146,
+              "win_rate": 0.3835616438356164,
+              "expectancy": -0.0011058227365699125,
+              "max_drawdown": 0.1949289598161047,
+              "profit_factor": 0.7073137319317
+            }
+          },
+          "regime": {
+            "range": {
+              "n": 253,
+              "expectancy": -0.0001310847505182817,
+              "win_rate": 0.43478260869565216
+            },
+            "strong_trend_bear": {
+              "n": 14,
+              "expectancy": -0.000575661516025955,
+              "win_rate": 0.2857142857142857
+            },
+            "strong_trend_bull": {
+              "n": 33,
+              "expectancy": 0.001390741405811377,
+              "win_rate": 0.45454545454545453
+            },
+            "volatility_contraction": {
+              "n": 24,
+              "expectancy": -0.004922087731711373,
+              "win_rate": 0.20833333333333334
+            },
+            "volatility_expansion": {
+              "n": 41,
+              "expectancy": -0.0014665107973392477,
+              "win_rate": 0.43902439024390244
+            },
+            "weak_trend_bear": {
+              "n": 4,
+              "expectancy": -0.002115846173630675,
+              "win_rate": 0.5
+            },
+            "weak_trend_bull": {
+              "n": 5,
+              "expectancy": -0.001486373051705854,
+              "win_rate": 0.4
+            }
+          }
+        },
+        "post_yahoo": {
+          "label": "x",
+          "signals": 177,
+          "wins": 73,
+          "losses": 104,
+          "win_rate": 0.4124293785310734,
+          "avg_return": -0.0003154507072536743,
+          "median_return": -0.001270932043010961,
+          "avg_winner": 0.008658579921100893,
+          "avg_loser": -0.006614529898310245,
+          "profit_factor": 0.9188343167903914,
+          "max_drawdown": 0.11952479312782271,
+          "total_net_return": -0.05583477518390035,
+          "cumulative_return": -0.06261345356804027,
+          "reliable": true,
+          "note": "Sample size meets the minimum threshold.",
+          "expectancy": -0.0003154507072536743,
+          "total_return": -0.06261345356804027,
+          "n": 177,
+          "avg_win": 0.008658579921100893,
+          "avg_loss": -0.006614529898310245,
+          "max_losing_streak": 8,
+          "avg_cost": 0.001703721585802466,
+          "gross_expectancy": 0.0013882708785487921,
+          "long_short": {
+            "bullish": {
+              "n": 110,
+              "win_rate": 0.44545454545454544,
+              "expectancy": -3.085614689037505e-05,
+              "max_drawdown": 0.07999322748667648,
+              "profit_factor": 0.991575015939602
+            },
+            "bearish": {
+              "n": 67,
+              "win_rate": 0.3582089552238806,
+              "expectancy": -0.0007826955078501359,
+              "max_drawdown": 0.08173160321374585,
+              "profit_factor": 0.816024218681655
+            }
+          },
+          "regime": {
+            "range": {
+              "n": 117,
+              "expectancy": 0.0001434727420379654,
+              "win_rate": 0.38461538461538464
+            },
+            "strong_trend_bear": {
+              "n": 6,
+              "expectancy": -0.00746858145349635,
+              "win_rate": 0.16666666666666666
+            },
+            "strong_trend_bull": {
+              "n": 21,
+              "expectancy": -0.0009333334948235214,
+              "win_rate": 0.5238095238095238
+            },
+            "volatility_contraction": {
+              "n": 12,
+              "expectancy": -0.0016591857412007395,
+              "win_rate": 0.5
+            },
+            "volatility_expansion": {
+              "n": 13,
+              "expectancy": 0.004110790628572555,
+              "win_rate": 0.6153846153846154
+            },
+            "weak_trend_bear": {
+              "n": 3,
+              "expectancy": 0.0024815947452706748,
+              "win_rate": 0.6666666666666666
+            },
+            "weak_trend_bull": {
+              "n": 5,
+              "expectancy": -0.009836885480583315,
+              "win_rate": 0.0
+            }
+          }
+        }
+      }
+    ],
+    "entry_slippage_stress": {
+      "label": "x",
+      "signals": 552,
+      "wins": 250,
+      "losses": 302,
+      "win_rate": 0.4528985507246377,
+      "avg_return": 0.00041511154031449515,
+      "median_return": -0.0007569879137323762,
+      "avg_winner": 0.008653825509992899,
+      "avg_loser": -0.006405015918028554,
+      "profit_factor": 1.1184613638873018,
+      "max_drawdown": 0.16028008699534885,
+      "total_net_return": 0.22914157025360132,
+      "cumulative_return": 0.22255756383365766,
+      "reliable": true,
+      "note": "Sample size meets the minimum threshold.",
+      "expectancy": 0.00041511154031449515,
+      "total_return": 0.22255756383365766,
+      "n": 552,
+      "avg_win": 0.008653825509992899,
+      "avg_loss": -0.006405015918028554,
+      "max_losing_streak": 9,
+      "avg_cost": 0.0005759965586495441,
+      "gross_expectancy": 0.0009911080989640393,
+      "long_short": {
+        "bullish": {
+          "n": 339,
+          "win_rate": 0.48672566371681414,
+          "expectancy": 0.0009022295971073546,
+          "max_drawdown": 0.09711967289028034,
+          "profit_factor": 1.2605445227511654
+        },
+        "bearish": {
+          "n": 213,
+          "win_rate": 0.39906103286384975,
+          "expectancy": -0.00036016085993329525,
+          "max_drawdown": 0.1305391151711499,
+          "profit_factor": 0.8991139096453284
+        }
+      },
+      "regime": {
+        "range": {
+          "n": 371,
+          "expectancy": 0.0008012892789002281,
+          "win_rate": 0.4555256064690027
+        },
+        "strong_trend_bear": {
+          "n": 20,
+          "expectancy": -0.0020989812068059155,
+          "win_rate": 0.25
+        },
+        "strong_trend_bull": {
+          "n": 54,
+          "expectancy": 0.0014628990532398545,
+          "win_rate": 0.5185185185185185
+        },
+        "volatility_contraction": {
+          "n": 36,
+          "expectancy": -0.002395931116835828,
+          "win_rate": 0.3888888888888889
+        },
+        "volatility_expansion": {
+          "n": 54,
+          "expectancy": 0.0004689219022247366,
+          "win_rate": 0.5185185185185185
+        },
+        "weak_trend_bear": {
+          "n": 7,
+          "expectancy": 0.0003858364183453016,
+          "win_rate": 0.5714285714285714
+        },
+        "weak_trend_bull": {
+          "n": 10,
+          "expectancy": -0.004692279439968013,
+          "win_rate": 0.2
+        }
+      }
+    },
+    "approx_breakeven_cost_mult": 3.0
+  },
+  "phase8_statistics": {
+    "bootstrap_all": {
+      "n_boot": 1000,
+      "expectancy_mean": 0.0007206127889390641,
+      "ci95_low": -0.00011139032802920715,
+      "ci95_high": 0.001536991188419305,
+      "pct_positive": 0.957,
+      "note": "Bootstrap resamples trade returns with replacement; not a proof of edge."
+    },
+    "bootstrap_pre_yahoo": {
+      "n_boot": 1000,
+      "expectancy_mean": 0.0006739958410825064,
+      "ci95_low": -0.00034898132296155913,
+      "ci95_high": 0.00173740032937902,
+      "pct_positive": 0.892,
+      "note": "Bootstrap resamples trade returns with replacement; not a proof of edge."
+    },
+    "bootstrap_val": {
+      "n_boot": 1000,
+      "expectancy_mean": 0.0008864852545556848,
+      "ci95_low": -0.0012683648576923884,
+      "ci95_high": 0.003143233823623941,
+      "pct_positive": 0.792,
+      "note": "Bootstrap resamples trade returns with replacement; not a proof of edge."
+    },
+    "monte_carlo_val": {
+      "n_runs": 200,
+      "paths_per_run": 2,
+      "max_drawdown": {
+        "median": 0.05911850187381103,
+        "p90": 0.09441226320951446,
+        "p95": 0.11052534803027629
+      },
+      "total_return": {
+        "median": 0.06306212130091837,
+        "p10": -0.02174281836356248,
+        "p5": -0.04930845456134155
+      },
+      "longest_losing_streak": {
+        "median": 5.0,
+        "p90": 7.100000000000023,
+        "p95": 8.0
+      }
+    },
+    "year_by_year": [
+      {
+        "year": 2017,
+        "n": 33,
+        "expectancy": -0.0022078215163996964,
+        "win_rate": 0.24242424242424243,
+        "profit_factor": 0.2865985053657427,
+        "max_drawdown": 0.07194030115664096,
+        "max_losing_streak": 8,
+        "avg_win": 0.0036587085951304017,
+        "avg_loss": -0.004085111152089327
+      },
+      {
+        "year": 2018,
+        "n": 61,
+        "expectancy": -0.00030264119822045435,
+        "win_rate": 0.4098360655737705,
+        "profit_factor": 0.920337543565695,
+        "max_drawdown": 0.09310663073270586,
+        "max_losing_streak": 9,
+        "avg_win": 0.008531223481958748,
+        "avg_loss": -0.006437269448344901
+      },
+      {
+        "year": 2019,
+        "n": 60,
+        "expectancy": 0.001776015231157184,
+        "win_rate": 0.5166666666666667,
+        "profit_factor": 1.5246872692737783,
+        "max_drawdown": 0.05196861672926043,
+        "max_losing_streak": 6,
+        "avg_win": 0.009988872960445342,
+        "avg_loss": -0.007003246479461191
+      },
+      {
+        "year": 2020,
+        "n": 54,
+        "expectancy": 0.0017441917919077648,
+        "win_rate": 0.5740740740740741,
+        "profit_factor": 1.5898734852118608,
+        "max_drawdown": 0.05391046221031847,
+        "max_losing_streak": 4,
+        "avg_win": 0.008188983495850349,
+        "avg_loss": -0.0069422665916670226
+      },
+      {
+        "year": 2021,
+        "n": 50,
+        "expectancy": 0.0011924743347085226,
+        "win_rate": 0.52,
+        "profit_factor": 1.34094408484956,
+        "max_drawdown": 0.057389247616262705,
+        "max_losing_streak": 5,
+        "avg_win": 0.009019307747327303,
+        "avg_loss": -0.007286595195628489
+      },
+      {
+        "year": 2022,
+        "n": 64,
+        "expectancy": 0.0015899532864363033,
+        "win_rate": 0.5,
+        "profit_factor": 1.4917162365831382,
+        "max_drawdown": 0.03689431029455205,
+        "max_losing_streak": 4,
+        "avg_win": 0.009646861162310809,
+        "avg_loss": -0.006466954589438202
+      },
+      {
+        "year": 2023,
+        "n": 67,
+        "expectancy": -0.001184461127229743,
+        "win_rate": 0.40298507462686567,
+        "profit_factor": 0.7018866914429268,
+        "max_drawdown": 0.10454553886031118,
+        "max_losing_streak": 5,
+        "avg_win": 0.006920181641769208,
+        "avg_loss": -0.006655094996304034
+      },
+      {
+        "year": 2024,
+        "n": 63,
+        "expectancy": 0.002232561701101569,
+        "win_rate": 0.5714285714285714,
+        "profit_factor": 1.909331242084148,
+        "max_drawdown": 0.04515662289573019,
+        "max_losing_streak": 6,
+        "avg_win": 0.008203528389766651,
+        "avg_loss": -0.005728727217118538
+      },
+      {
+        "year": 2025,
+        "n": 59,
+        "expectancy": 0.0007856257127115238,
+        "win_rate": 0.4576271186440678,
+        "profit_factor": 1.213097305383839,
+        "max_drawdown": 0.06579531158262741,
+        "max_losing_streak": 6,
+        "avg_win": 0.009772858628965967,
+        "avg_loss": -0.006797352060378162
+      },
+      {
+        "year": 2026,
+        "n": 40,
+        "expectancy": 0.0002847097646548792,
+        "win_rate": 0.45,
+        "profit_factor": 1.0888838477675788,
+        "max_drawdown": 0.048292536992747936,
+        "max_losing_streak": 5,
+        "avg_win": 0.007750836171045821,
+        "avg_loss": -0.005823939113301347
+      }
+    ]
+  },
+  "phase9_temporal": {
+    "year_by_year": [
+      {
+        "year": 2017,
+        "n": 33,
+        "expectancy": -0.0022078215163996964,
+        "win_rate": 0.24242424242424243,
+        "profit_factor": 0.2865985053657427,
+        "max_drawdown": 0.07194030115664096,
+        "max_losing_streak": 8,
+        "avg_win": 0.0036587085951304017,
+        "avg_loss": -0.004085111152089327
+      },
+      {
+        "year": 2018,
+        "n": 61,
+        "expectancy": -0.00030264119822045435,
+        "win_rate": 0.4098360655737705,
+        "profit_factor": 0.920337543565695,
+        "max_drawdown": 0.09310663073270586,
+        "max_losing_streak": 9,
+        "avg_win": 0.008531223481958748,
+        "avg_loss": -0.006437269448344901
+      },
+      {
+        "year": 2019,
+        "n": 60,
+        "expectancy": 0.001776015231157184,
+        "win_rate": 0.5166666666666667,
+        "profit_factor": 1.5246872692737783,
+        "max_drawdown": 0.05196861672926043,
+        "max_losing_streak": 6,
+        "avg_win": 0.009988872960445342,
+        "avg_loss": -0.007003246479461191
+      },
+      {
+        "year": 2020,
+        "n": 54,
+        "expectancy": 0.0017441917919077648,
+        "win_rate": 0.5740740740740741,
+        "profit_factor": 1.5898734852118608,
+        "max_drawdown": 0.05391046221031847,
+        "max_losing_streak": 4,
+        "avg_win": 0.008188983495850349,
+        "avg_loss": -0.0069422665916670226
+      },
+      {
+        "year": 2021,
+        "n": 50,
+        "expectancy": 0.0011924743347085226,
+        "win_rate": 0.52,
+        "profit_factor": 1.34094408484956,
+        "max_drawdown": 0.057389247616262705,
+        "max_losing_streak": 5,
+        "avg_win": 0.009019307747327303,
+        "avg_loss": -0.007286595195628489
+      },
+      {
+        "year": 2022,
+        "n": 64,
+        "expectancy": 0.0015899532864363033,
+        "win_rate": 0.5,
+        "profit_factor": 1.4917162365831382,
+        "max_drawdown": 0.03689431029455205,
+        "max_losing_streak": 4,
+        "avg_win": 0.009646861162310809,
+        "avg_loss": -0.006466954589438202
+      },
+      {
+        "year": 2023,
+        "n": 67,
+        "expectancy": -0.001184461127229743,
+        "win_rate": 0.40298507462686567,
+        "profit_factor": 0.7018866914429268,
+        "max_drawdown": 0.10454553886031118,
+        "max_losing_streak": 5,
+        "avg_win": 0.006920181641769208,
+        "avg_loss": -0.006655094996304034
+      },
+      {
+        "year": 2024,
+        "n": 63,
+        "expectancy": 0.002232561701101569,
+        "win_rate": 0.5714285714285714,
+        "profit_factor": 1.909331242084148,
+        "max_drawdown": 0.04515662289573019,
+        "max_losing_streak": 6,
+        "avg_win": 0.008203528389766651,
+        "avg_loss": -0.005728727217118538
+      },
+      {
+        "year": 2025,
+        "n": 59,
+        "expectancy": 0.0007856257127115238,
+        "win_rate": 0.4576271186440678,
+        "profit_factor": 1.213097305383839,
+        "max_drawdown": 0.06579531158262741,
+        "max_losing_streak": 6,
+        "avg_win": 0.009772858628965967,
+        "avg_loss": -0.006797352060378162
+      },
+      {
+        "year": 2026,
+        "n": 40,
+        "expectancy": 0.0002847097646548792,
+        "win_rate": 0.45,
+        "profit_factor": 1.0888838477675788,
+        "max_drawdown": 0.048292536992747936,
+        "max_losing_streak": 5,
+        "avg_win": 0.007750836171045821,
+        "avg_loss": -0.005823939113301347
+      }
+    ],
+    "longest_positive_year_streak": 4,
+    "longest_negative_year_streak": 2,
+    "n_positive_years": 7,
+    "n_negative_years": 3,
+    "longest_underwater_trades": 152,
+    "worst_rolling_12m_expectancy": -0.0025239761220694702,
+    "best_rolling_12m_expectancy": 0.003423477527800935,
+    "rolling_12m": [
+      {
+        "start": "2017-04-13",
+        "n": 52,
+        "expectancy": -0.0025239761220694702,
+        "win_rate": 0.25,
+        "max_drawdown": 0.12386444735385105
+      },
+      {
+        "start": "2017-07-12",
+        "n": 46,
+        "expectancy": -0.002062903868649045,
+        "win_rate": 0.30434782608695654,
+        "max_drawdown": 0.10042196629126343
+      },
+      {
+        "start": "2017-10-10",
+        "n": 57,
+        "expectancy": -0.0014041711255418081,
+        "win_rate": 0.3508771929824561,
+        "max_drawdown": 0.09052848374165978
+      },
+      {
+        "start": "2018-01-08",
+        "n": 61,
+        "expectancy": -0.0005343195572471952,
+        "win_rate": 0.4098360655737705,
+        "max_drawdown": 0.09310663073270559
+      },
+      {
+        "start": "2018-04-08",
+        "n": 53,
+        "expectancy": 0.0012427415916656376,
+        "win_rate": 0.4339622641509434,
+        "max_drawdown": 0.04304224940905318
+      },
+      {
+        "start": "2018-07-07",
+        "n": 53,
+        "expectancy": 0.0010677225023243563,
+        "win_rate": 0.4339622641509434,
+        "max_drawdown": 0.051968616729260564
+      },
+      {
+        "start": "2018-10-05",
+        "n": 54,
+        "expectancy": 0.001152945613508084,
+        "win_rate": 0.4444444444444444,
+        "max_drawdown": 0.05196861672926044
+      },
+      {
+        "start": "2019-01-03",
+        "n": 60,
+        "expectancy": 0.001776015231157184,
+        "win_rate": 0.5166666666666667,
+        "max_drawdown": 0.05196861672926043
+      },
+      {
+        "start": "2019-04-03",
+        "n": 72,
+        "expectancy": 0.0012784644094605416,
+        "win_rate": 0.5416666666666666,
+        "max_drawdown": 0.05391046221031893
+      },
+      {
+        "start": "2019-07-02",
+        "n": 70,
+        "expectancy": 0.0027783078611856803,
+        "win_rate": 0.5857142857142857,
+        "max_drawdown": 0.05391046221031851
+      },
+      {
+        "start": "2019-09-30",
+        "n": 64,
+        "expectancy": 0.003423477527800935,
+        "win_rate": 0.625,
+        "max_drawdown": 0.05391046221031886
+      },
+      {
+        "start": "2019-12-29",
+        "n": 55,
+        "expectancy": 0.0021459029388632774,
+        "win_rate": 0.5818181818181818,
+        "max_drawdown": 0.053910462210318935
+      },
+      {
+        "start": "2020-03-28",
+        "n": 46,
+        "expectancy": 0.0024470716160877298,
+        "win_rate": 0.6086956521739131,
+        "max_drawdown": 0.0379164149723529
+      },
+      {
+        "start": "2020-06-26",
+        "n": 47,
+        "expectancy": 0.0002821702007738659,
+        "win_rate": 0.574468085106383,
+        "max_drawdown": 0.057389247616262865
+      },
+      {
+        "start": "2020-09-24",
+        "n": 50,
+        "expectancy": 0.0010703879106029029,
+        "win_rate": 0.54,
+        "max_drawdown": 0.0573892476162628
+      },
+      {
+        "start": "2020-12-23",
+        "n": 49,
+        "expectancy": 0.0010803517381424883,
+        "win_rate": 0.5102040816326531,
+        "max_drawdown": 0.05738924761626312
+      },
+      {
+        "start": "2021-03-23",
+        "n": 61,
+        "expectancy": 0.001989674019786079,
+        "win_rate": 0.5245901639344263,
+        "max_drawdown": 0.05151732968261046
+      },
+      {
+        "start": "2021-06-21",
+        "n": 68,
+        "expectancy": 0.0020565824876454335,
+        "win_rate": 0.4852941176470588,
+        "max_drawdown": 0.05151732968261097
+      },
+      {
+        "start": "2021-09-19",
+        "n": 68,
+        "expectancy": 0.0011173964214354533,
+        "win_rate": 0.45588235294117646,
+        "max_drawdown": 0.038979552388183736
+      },
+      {
+        "start": "2021-12-18",
+        "n": 65,
+        "expectancy": 0.0017626572476351049,
+        "win_rate": 0.5076923076923077,
+        "max_drawdown": 0.036894310294552056
+      },
+      {
+        "start": "2022-03-18",
+        "n": 70,
+        "expectancy": -0.00020370821597747184,
+        "win_rate": 0.4,
+        "max_drawdown": 0.07533480673147715
+      },
+      {
+        "start": "2022-06-16",
+        "n": 66,
+        "expectancy": -0.0005222772299735014,
+        "win_rate": 0.45454545454545453,
+        "max_drawdown": 0.0811109990496617
+      },
+      {
+        "start": "2022-09-14",
+        "n": 62,
+        "expectancy": -9.032016522440408e-05,
+        "win_rate": 0.4838709677419355,
+        "max_drawdown": 0.08111099904966143
+      },
+      {
+        "start": "2022-12-13",
+        "n": 65,
+        "expectancy": -0.0010330957047818034,
+        "win_rate": 0.4153846153846154,
+        "max_drawdown": 0.08954492903566959
+      },
+      {
+        "start": "2023-03-13",
+        "n": 57,
+        "expectancy": -0.00014445354813900248,
+        "win_rate": 0.47368421052631576,
+        "max_drawdown": 0.11885020985690242
+      },
+      {
+        "start": "2023-06-11",
+        "n": 52,
+        "expectancy": -0.0008533756695486566,
+        "win_rate": 0.4230769230769231,
+        "max_drawdown": 0.11885020985690253
+      },
+      {
+        "start": "2023-09-09",
+        "n": 60,
+        "expectancy": 0.00026940572917209224,
+        "win_rate": 0.4666666666666667,
+        "max_drawdown": 0.11227955652599753
+      },
+      {
+        "start": "2023-12-08",
+        "n": 59,
+        "expectancy": 0.001839335652561991,
+        "win_rate": 0.5423728813559322,
+        "max_drawdown": 0.06472594662959151
+      },
+      {
+        "start": "2024-03-07",
+        "n": 67,
+        "expectancy": 0.0014864274841561657,
+        "win_rate": 0.582089552238806,
+        "max_drawdown": 0.0495141845134311
+      },
+      {
+        "start": "2024-06-05",
+        "n": 69,
+        "expectancy": 0.0018765079801462165,
+        "win_rate": 0.4927536231884058,
+        "max_drawdown": 0.06618879142698651
+      },
+      {
+        "start": "2024-09-03",
+        "n": 66,
+        "expectancy": 0.0019598409991111263,
+        "win_rate": 0.5303030303030303,
+        "max_drawdown": 0.06618879142698689
+      },
+      {
+        "start": "2024-12-02",
+        "n": 64,
+        "expectancy": 0.0014407652425763066,
+        "win_rate": 0.5,
+        "max_drawdown": 0.06618879142698689
+      },
+      {
+        "start": "2025-03-02",
+        "n": 62,
+        "expectancy": 0.0012702982170740577,
+        "win_rate": 0.46774193548387094,
+        "max_drawdown": 0.05772363951178775
+      },
+      {
+        "start": "2025-05-31",
+        "n": 63,
+        "expectancy": 0.000651521207694986,
+        "win_rate": 0.5079365079365079,
+        "max_drawdown": 0.05772363951178814
+      },
+      {
+        "start": "2025-08-29",
+        "n": 55,
+        "expectancy": -0.00024232537497135748,
+        "win_rate": 0.43636363636363634,
+        "max_drawdown": 0.0482925369927479
+      },
+      {
+        "start": "2025-11-27",
+        "n": 45,
+        "expectancy": -0.0002108986932115746,
+        "win_rate": 0.4444444444444444,
+        "max_drawdown": 0.04829253699274805
+      },
+      {
+        "start": "2026-02-25",
+        "n": 25,
+        "expectancy": 0.0005172222211090513,
+        "win_rate": 0.44,
+        "max_drawdown": 0.048292536992747784
+      },
+      {
+        "start": "2026-05-26",
+        "n": 7,
+        "expectancy": -0.0002912635729017319,
+        "win_rate": 0.2857142857142857,
+        "max_drawdown": 0.010524512641383852
+      }
+    ]
+  },
+  "phase10_causal_audit": {
+    "htf_look_ahead": {
+      "test": "daily_htf_same_day_ohlc_leak",
+      "look_ahead_detected": true,
+      "sample_leaks": [
+        {
+          "bar_idx": 0,
+          "day": 18518,
+          "mid_close": 100.05,
+          "daily_full_close": 100.14999999999999,
+          "day_end_4h_close": 100.14999999999999,
+          "causal_daily_close": 100.05,
+          "htf_class_full_daily": 0,
+          "htf_class_causal_daily": 0,
+          "class_mismatch": false
+        },
+        {
+          "bar_idx": 1,
+          "day": 18518,
+          "mid_close": 100.1,
+          "daily_full_close": 100.14999999999999,
+          "day_end_4h_close": 100.14999999999999,
+          "causal_daily_close": 100.1,
+          "htf_class_full_daily": 0,
+          "htf_class_causal_daily": 0,
+          "class_mismatch": false
+        },
+        {
+          "bar_idx": 3,
+          "day": 18519,
+          "mid_close": 100.19999999999999,
+          "daily_full_close": 100.20999999999998,
+          "day_end_4h_close": 100.20999999999998,
+          "causal_daily_close": 100.19999999999999,
+          "htf_class_full_daily": 0,
+          "htf_class_causal_daily": 0,
+          "class_mismatch": false
+        },
+        {
+          "bar_idx": 4,
+          "day": 18519,
+          "mid_close": 100.24999999999999,
+          "daily_full_close": 100.20999999999998,
+          "day_end_4h_close": 100.20999999999998,
+          "causal_daily_close": 100.24999999999999,
+          "htf_class_full_daily": 0,
+          "htf_class_causal_daily": 0,
+          "class_mismatch": false
+        },
+        {
+          "bar_idx": 5,
+          "day": 18519,
+          "mid_close": 100.29999999999998,
+          "daily_full_close": 100.20999999999998,
+          "day_end_4h_close": 100.20999999999998,
+          "causal_daily_close": 100.29999999999998,
+          "htf_class_full_daily": 0,
+          "htf_class_causal_daily": 0,
+          "class_mismatch": false
+        }
+      ],
+      "n_leak_examples": 5,
+      "n_class_mismatches_in_samples": 0,
+      "mechanism": "aggregate_daily() builds full-day OHLC from all 4H bars of the UTC day; _htf_class(daily, t) selects that day's bar when t is mid-day, so high/low/close (and thus ADX/swing structure) can incorporate later 4H bars of the same day.",
+      "passthrough_requirement": "At 4H timestamp t, Daily HTF must use only fully completed days before t (exclude the in-progress UTC day).",
+      "pass": false,
+      "mid_day_htf_classes": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "end_of_day_htf_class": 0,
+      "ctx_mid_day_classes": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "ctx_end_of_day_class": 0,
+      "classification_leak_synthetic": false,
+      "real_sample_mechanical": {
+        "n_leak_examples": 5,
+        "sample_leaks": [
+          {
+            "bar_idx": 0,
+            "day": 17213,
+            "mid_close": 234.3,
+            "daily_full_close": 234.726,
+            "day_end_4h_close": 234.726,
+            "causal_daily_close": 234.3,
+            "htf_class_full_daily": 0,
+            "htf_class_causal_daily": 0,
+            "class_mismatch": false
+          },
+          {
+            "bar_idx": 1,
+            "day": 17213,
+            "mid_close": 234.37,
+            "daily_full_close": 234.726,
+            "day_end_4h_close": 234.726,
+            "causal_daily_close": 234.37,
+            "htf_class_full_daily": 0,
+            "htf_class_causal_daily": 0,
+            "class_mismatch": false
+          },
+          {
+            "bar_idx": 3,
+            "day": 17214,
+            "mid_close": 234.21,
+            "daily_full_close": 235.045,
+            "day_end_4h_close": 235.045,
+            "causal_daily_close": 234.21,
+            "htf_class_full_daily": 0,
+            "htf_class_causal_daily": 0,
+            "class_mismatch": false
+          },
+          {
+            "bar_idx": 4,
+            "day": 17214,
+            "mid_close": 234.57,
+            "daily_full_close": 235.045,
+            "day_end_4h_close": 235.045,
+            "causal_daily_close": 234.57,
+            "htf_class_full_daily": 0,
+            "htf_class_causal_daily": 0,
+            "class_mismatch": false
+          },
+          {
+            "bar_idx": 6,
+            "day": 17218,
+            "mid_close": 236.4,
+            "daily_full_close": 236.406,
+            "day_end_4h_close": 236.406,
+            "causal_daily_close": 236.4,
+            "htf_class_full_daily": 0,
+            "htf_class_causal_daily": 0,
+            "class_mismatch": false
+          }
+        ]
+      }
+    },
+    "sample_entry_check": {
+      "entry_idx": 456,
+      "entry_ts": 1510243200,
+      "fvg_after_sweep_bull": true,
+      "fvg_after_sweep_bear": false,
+      "daily_class": 1,
+      "issues": [],
+      "pass": true,
+      "note": "FVG/sweep indices are <= entry_idx by construction; HTF same-day leak checked separately."
+    },
+    "look_ahead_detected": true,
+    "all_pass": false
+  },
+  "nested_splits": {
+    "train": {
+      "label": "x",
+      "signals": 186,
+      "wins": 88,
+      "losses": 98,
+      "win_rate": 0.4731182795698925,
+      "avg_return": 0.0013708559338918807,
+      "median_return": -0.000640531418211717,
+      "avg_winner": 0.009666163782220915,
+      "avg_loser": -0.006077991929913783,
+      "profit_factor": 1.4280737189561015,
+      "max_drawdown": 0.09074914359725678,
+      "total_net_return": 0.2549792037038898,
+      "cumulative_return": 0.27556623699352456,
+      "reliable": true,
+      "note": "Sample size meets the minimum threshold.",
+      "expectancy": 0.0013708559338918807,
+      "total_return": 0.27556623699352456,
+      "n": 186,
+      "avg_win": 0.009666163782220915,
+      "avg_loss": -0.006077991929913783,
+      "max_losing_streak": 6,
+      "avg_cost": 0.0006607275081712485,
+      "gross_expectancy": 0.002031583442063129,
+      "long_short": {
+        "bullish": {
+          "n": 120,
+          "win_rate": 0.5166666666666667,
+          "expectancy": 0.0019002477536967384,
+          "max_drawdown": 0.05764402481860799,
+          "profit_factor": 1.58165168858011
+        },
+        "bearish": {
+          "n": 66,
+          "win_rate": 0.3939393939393939,
+          "expectancy": 0.0004083253524285036,
+          "max_drawdown": 0.09759066008195426,
+          "profit_factor": 1.1323615986788498
+        }
+      },
+      "regime": {
+        "range": {
+          "n": 120,
+          "expectancy": 0.0022966830622191334,
+          "win_rate": 0.5
+        },
+        "strong_trend_bear": {
+          "n": 1,
+          "expectancy": -0.005514791518674,
+          "win_rate": 0.0
+        },
+        "strong_trend_bull": {
+          "n": 19,
+          "expectancy": 0.002432390943241256,
+          "win_rate": 0.47368421052631576
+        },
+        "volatility_contraction": {
+          "n": 16,
+          "expectancy": -0.0024694046686908025,
+          "win_rate": 0.375
+        },
+        "volatility_expansion": {
+          "n": 27,
+          "expectancy": -0.00010110184107118837,
+          "win_rate": 0.4444444444444444
+        },
+        "weak_trend_bear": {
+          "n": 1,
+          "expectancy": -0.01034227791614778,
+          "win_rate": 0.0
+        },
+        "weak_trend_bull": {
+          "n": 2,
+          "expectancy": -0.004370448920596669,
+          "win_rate": 0.5
+        }
+      }
+    },
+    "val": {
+      "label": "x",
+      "signals": 72,
+      "wins": 36,
+      "losses": 36,
+      "win_rate": 0.5,
+      "avg_return": 0.0008960993510709849,
+      "median_return": 0.00014394072017632158,
+      "avg_winner": 0.008106414854356802,
+      "avg_loser": -0.006314216152214832,
+      "profit_factor": 1.283835500549553,
+      "max_drawdown": 0.06841292237040551,
+      "total_net_return": 0.06451915327711091,
+      "cumulative_return": 0.06306212130091748,
+      "reliable": true,
+      "note": "Sample size meets the minimum threshold.",
+      "expectancy": 0.0008960993510709849,
+      "total_return": 0.06306212130091748,
+      "n": 72,
+      "avg_win": 0.008106414854356802,
+      "avg_loss": -0.006314216152214832,
+      "max_losing_streak": 6,
+      "avg_cost": 0.0004888459318086549,
+      "gross_expectancy": 0.00138494528287964,
+      "long_short": {
+        "bullish": {
+          "n": 45,
+          "win_rate": 0.5111111111111111,
+          "expectancy": 0.0015065143015793358,
+          "max_drawdown": 0.05561464012821972,
+          "profit_factor": 1.4968110400790717
+        },
+        "bearish": {
+          "n": 27,
+          "win_rate": 0.48148148148148145,
+          "expectancy": -0.00012125889977626673,
+          "max_drawdown": 0.06055459712784644,
+          "profit_factor": 0.9639647391592352
+        }
+      },
+      "regime": {
+        "range": {
+          "n": 43,
+          "expectancy": 0.001479994646129249,
+          "win_rate": 0.5581395348837209
+        },
+        "strong_trend_bear": {
+          "n": 8,
+          "expectancy": 0.0010024349239550739,
+          "win_rate": 0.375
+        },
+        "strong_trend_bull": {
+          "n": 11,
+          "expectancy": 0.000371674355097682,
+          "win_rate": 0.36363636363636365
+        },
+        "volatility_contraction": {
+          "n": 3,
+          "expectancy": -0.005596126385695254,
+          "win_rate": 0.3333333333333333
+        },
+        "volatility_expansion": {
+          "n": 2,
+          "expectancy": 0.002585236493457673,
+          "win_rate": 1.0
+        },
+        "weak_trend_bear": {
+          "n": 2,
+          "expectancy": -0.0017418899114825998,
+          "win_rate": 0.5
+        },
+        "weak_trend_bull": {
+          "n": 3,
+          "expectancy": 0.0012910573963245788,
+          "win_rate": 0.3333333333333333
+        }
+      }
+    },
+    "final_time": {
+      "label": "x",
+      "signals": 91,
+      "wins": 43,
+      "losses": 48,
+      "win_rate": 0.4725274725274725,
+      "avg_return": 0.00042325815248764516,
+      "median_return": -0.0005994790646271075,
+      "avg_winner": 0.007821270082115972,
+      "avg_loser": -0.006204127534471064,
+      "profit_factor": 1.129337591729499,
+      "max_drawdown": 0.06166942649976125,
+      "total_net_return": 0.03851649187637571,
+      "cumulative_return": 0.03552507139190886,
+      "reliable": true,
+      "note": "Sample size meets the minimum threshold.",
+      "expectancy": 0.00042325815248764516,
+      "total_return": 0.03552507139190886,
+      "n": 91,
+      "avg_win": 0.007821270082115972,
+      "avg_loss": -0.006204127534471064,
+      "max_losing_streak": 6,
+      "avg_cost": 0.0005775725510320116,
+      "gross_expectancy": 0.0010008307035196569,
+      "long_short": {
+        "bullish": {
+          "n": 57,
+          "win_rate": 0.5263157894736842,
+          "expectancy": 0.0009310163842994314,
+          "max_drawdown": 0.04956458412468233,
+          "profit_factor": 1.2985850249146422
+        },
+        "bearish": {
+          "n": 34,
+          "win_rate": 0.38235294117647056,
+          "expectancy": -0.00042798358907917297,
+          "max_drawdown": 0.05357240869960742,
+          "profit_factor": 0.8788053709816327
+        }
+      },
+      "regime": {
+        "range": {
+          "n": 62,
+          "expectancy": 0.0009127107695586846,
+          "win_rate": 0.5161290322580645
+        },
+        "strong_trend_bear": {
+          "n": 4,
+          "expectancy": -0.008075477267218866,
+          "win_rate": 0.0
+        },
+        "strong_trend_bull": {
+          "n": 7,
+          "expectancy": -0.0026565551149114745,
+          "win_rate": 0.42857142857142855
+        },
+        "volatility_contraction": {
+          "n": 9,
+          "expectancy": 0.00022690415222479353,
+          "win_rate": 0.4444444444444444
+        },
+        "volatility_expansion": {
+          "n": 6,
+          "expectancy": 0.005923111066835983,
+          "win_rate": 0.5
+        },
+        "weak_trend_bear": {
+          "n": 1,
+          "expectancy": 0.007757600015650459,
+          "win_rate": 1.0
+        },
+        "weak_trend_bull": {
+          "n": 2,
+          "expectancy": -0.006256092374848228,
+          "win_rate": 0.0
+        }
+      }
+    },
+    "final_inst": {
+      "label": "x",
+      "signals": 101,
+      "wins": 47,
+      "losses": 54,
+      "win_rate": 0.46534653465346537,
+      "avg_return": 0.0003225654085423573,
+      "median_return": -0.0004363480167810282,
+      "avg_winner": 0.008252701512391138,
+      "avg_loser": -0.006579590089251952,
+      "profit_factor": 1.0916951929314842,
+      "max_drawdown": 0.14185624974424477,
+      "total_net_return": 0.03257910626277809,
+      "cumulative_return": 0.027844184175694897,
+      "reliable": true,
+      "note": "Sample size meets the minimum threshold.",
+      "expectancy": 0.0003225654085423573,
+      "total_return": 0.027844184175694897,
+      "n": 101,
+      "avg_win": 0.008252701512391138,
+      "avg_loss": -0.006579590089251952,
+      "max_losing_streak": 7,
+      "avg_cost": 0.00048592713211361707,
+      "gross_expectancy": 0.0008084925406559743,
+      "long_short": {
+        "bullish": {
+          "n": 59,
+          "win_rate": 0.5084745762711864,
+          "expectancy": 0.00016224015802592686,
+          "max_drawdown": 0.08987286041556841,
+          "profit_factor": 1.0476494112533303
+        },
+        "bearish": {
+          "n": 42,
+          "win_rate": 0.40476190476190477,
+          "expectancy": 0.0005477842128392478,
+          "max_drawdown": 0.060012269205185015,
+          "profit_factor": 1.1489986206643856
+        }
+      },
+      "regime": {
+        "range": {
+          "n": 73,
+          "expectancy": -7.286974484679169e-05,
+          "win_rate": 0.3835616438356164
+        },
+        "strong_trend_bear": {
+          "n": 2,
+          "expectancy": 0.0076246393456671675,
+          "win_rate": 1.0
+        },
+        "strong_trend_bull": {
+          "n": 11,
+          "expectancy": 0.0017558595493842436,
+          "win_rate": 0.7272727272727273
+        },
+        "volatility_contraction": {
+          "n": 3,
+          "expectancy": -0.0008873463476564604,
+          "win_rate": 0.6666666666666666
+        },
+        "volatility_expansion": {
+          "n": 9,
+          "expectancy": 0.003549801701587823,
+          "win_rate": 0.7777777777777778
+        },
+        "weak_trend_bear": {
+          "n": 1,
+          "expectancy": -0.0014721057972437433,
+          "win_rate": 0.0
+        },
+        "weak_trend_bull": {
+          "n": 2,
+          "expectancy": -0.01223960328602221,
+          "win_rate": 0.0
+        }
+      }
+    },
+    "gate": {
+      "positive_val_oos": true,
+      "positive_final_time": true,
+      "positive_final_inst": true,
+      "resilient_2x": true,
+      "folds_ge_3": true,
+      "folds_positive_count": 4,
+      "adequate_val_n": true,
+      "adequate_final_time_n": true,
+      "adequate_final_inst_n": true,
+      "acceptable_dd": true,
+      "multi_symbol": true,
+      "not_one_symbol": true,
+      "not_fragile": true,
+      "rotations_ok": true,
+      "beats_baseline": true,
+      "val_n": 72,
+      "final_time_n": 91,
+      "final_inst_n": 101,
+      "final_time_expectancy": 0.00042325815248764516,
+      "final_inst_expectancy": 0.0003225654085423573,
+      "val_expectancy": 0.0008960993510709849,
+      "val_2x_expectancy": 0.0004072534192623298,
+      "symbols_positive": [
+        "GOOGL",
+        "JPM",
+        "META",
+        "QQQ",
+        "SPY"
+      ],
+      "best1_share": 0.25114709322208384,
+      "rotation_positive": 2,
+      "rotation_total": 3,
+      "all_pass": true
+    }
+  },
+  "folds": [
+    {
+      "fold": 1,
+      "metrics": {
+        "label": "f1",
+        "signals": 73,
+        "wins": 27,
+        "losses": 46,
+        "win_rate": 0.3698630136986301,
+        "avg_return": 0.00024341685770872624,
+        "median_return": -0.001237910463112809,
+        "avg_winner": 0.00944663692657721,
+        "avg_loser": -0.0051584731827140785,
+        "profit_factor": 1.0748849429200418,
+        "max_drawdown": 0.09074914359725678,
+        "total_net_return": 0.017769430612737017,
+        "cumulative_return": 0.013303757126633231,
+        "reliable": true,
+        "note": "Sample size meets the minimum threshold.",
+        "expectancy": 0.00024341685770872624,
+        "total_return": 0.013303757126633231
+      }
+    },
+    {
+      "fold": 2,
+      "metrics": {
+        "label": "f2",
+        "signals": 93,
+        "wins": 54,
+        "losses": 39,
+        "win_rate": 0.5806451612903226,
+        "avg_return": 0.0021384517318593648,
+        "median_return": 0.0011195404827376314,
+        "avg_winner": 0.009155575467076153,
+        "avg_loser": -0.007577565747671574,
+        "profit_factor": 1.6729581858944855,
+        "max_drawdown": 0.050472033698397645,
+        "total_net_return": 0.1988760110629209,
+        "cumulative_return": 0.21289076459693046,
+        "reliable": true,
+        "note": "Sample size meets the minimum threshold.",
+        "expectancy": 0.0021384517318593648,
+        "total_return": 0.21289076459693046
+      }
+    },
+    {
+      "fold": 3,
+      "metrics": {
+        "label": "f3",
+        "signals": 92,
+        "wins": 43,
+        "losses": 49,
+        "win_rate": 0.4673913043478261,
+        "avg_return": 0.001117966470710248,
+        "median_return": -0.0001986302288943026,
+        "avg_winner": 0.009139373845409034,
+        "avg_loser": -0.005921227756066235,
+        "profit_factor": 1.3544938945666627,
+        "max_drawdown": 0.06841292237040547,
+        "total_net_return": 0.10285291530534282,
+        "cumulative_return": 0.10331701817773986,
+        "reliable": true,
+        "note": "Sample size meets the minimum threshold.",
+        "expectancy": 0.001117966470710248,
+        "total_return": 0.10331701817773986
+      }
+    },
+    {
+      "fold": 4,
+      "metrics": {
+        "label": "f4",
+        "signals": 91,
+        "wins": 43,
+        "losses": 48,
+        "win_rate": 0.4725274725274725,
+        "avg_return": 0.00042325815248764516,
+        "median_return": -0.0005994790646271075,
+        "avg_winner": 0.007821270082115972,
+        "avg_loser": -0.006204127534471064,
+        "profit_factor": 1.129337591729499,
+        "max_drawdown": 0.06166942649976125,
+        "total_net_return": 0.03851649187637571,
+        "cumulative_return": 0.03552507139190886,
+        "reliable": true,
+        "note": "Sample size meets the minimum threshold.",
+        "expectancy": 0.00042325815248764516,
+        "total_return": 0.03552507139190886
+      }
+    }
+  ],
+  "live_scanner_protected": true,
+  "promoted": false,
+  "stop_note": "STOP for user approval. Do NOT merge to live or enable paper/live trading.",
+  "load_errors": []
+}
