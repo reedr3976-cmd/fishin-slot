@@ -35,6 +35,7 @@ from backtest.report_scanner_v11 import _direction_breakdown, _regime_breakdown
 from backtest.scanner_v11 import folds_for_spec, run_spec_on_map
 from backtest.scanner_v2 import V2Trade
 from backtest.scanner_v5 import leave_out_symbols, monte_carlo
+from backtest.scanner_v2 import rescale_cost
 import backtest.market_context_v11 as mc11
 import backtest.scanner_v11 as sv11
 
@@ -314,40 +315,43 @@ def _run_all(
     )
 
 
-def _perturbation_battery(series_4h, daily_map, weekly_map, macro, instruments) -> list[dict[str, Any]]:
-    """Diagnostic only — does not replace frozen E3."""
+def _perturbation_battery(series_4h, daily_map, weekly_map, macro, instruments) -> dict[str, Any]:
+    """Diagnostic only — does not replace frozen E3.
+
+    Uses DEV instruments only for speed; stop-distance perturbations reuse context.
+    """
+    # Restrict to DEV for diagnostic speed (same frozen rules)
+    from config import V13_STOCK_DEV
+
+    diag_inst = [k for k in V13_STOCK_DEV if (k, "4h") in series_4h]
     results = []
     baseline_ctx: dict = {}
-    baseline = _run_all(series_4h, daily_map, weekly_map, baseline_ctx, macro, instruments)
+    baseline = _run_all(series_4h, daily_map, weekly_map, baseline_ctx, macro, diag_inst)
     base_exp = _exp(baseline)
 
-    perturbations = [
+    # Context-affecting perturbations
+    ctx_perturbs = [
         ("htf_adx_weak", "V11_ADX_WEAK", mc11, 15.0),
         ("htf_adx_weak", "V11_ADX_WEAK", mc11, 21.0),
         ("pivot", "V11_PIVOT", mc11, 1),
         ("pivot", "V11_PIVOT", mc11, 3),
         ("fvg_max_age", "V11_FVG_MAX_AGE", mc11, 20),
         ("fvg_max_age", "V11_FVG_MAX_AGE", mc11, 40),
-        ("stop_atr_mult", "V11_ATR_STOP_MULT", sv11, 1.25),
-        ("stop_atr_mult", "V11_ATR_STOP_MULT", sv11, 1.75),
     ]
-    # Store originals
+    originals = {attr: getattr(mod, attr) for _, attr, mod, _ in ctx_perturbs}
+    # dedupe originals by attr
     originals = {}
-    for _, attr, mod, _ in perturbations:
-        originals[(id(mod), attr)] = getattr(mod, attr)
+    for _, attr, mod, _ in ctx_perturbs:
+        originals[attr] = (mod, getattr(mod, attr))
 
-    for label, attr, mod, value in perturbations:
-        clear_v11_cache()
-        # reset all first
-        for (mid, a), ov in originals.items():
-            # find module by id
-            for _, aa, mm, _ in perturbations:
-                if id(mm) == mid and aa == a:
-                    setattr(mm, aa, ov)
+    for label, attr, mod, value in ctx_perturbs:
+        for a, (m, ov) in originals.items():
+            setattr(m, a, ov)
         setattr(mod, attr, value)
         clear_v11_cache()
+        print(f"    perturb {label}={value}...", flush=True)
         ctx: dict = {}
-        trades = _run_all(series_4h, daily_map, weekly_map, ctx, macro, instruments)
+        trades = _run_all(series_4h, daily_map, weekly_map, ctx, macro, diag_inst)
         exp = _exp(trades)
         results.append(
             {
@@ -356,24 +360,41 @@ def _perturbation_battery(series_4h, daily_map, weekly_map, macro, instruments) 
                 "expectancy": exp,
                 "delta_vs_frozen": (exp - base_exp) if exp is not None and base_exp is not None else None,
                 "positive": bool(exp is not None and exp > 0),
-                "collapsed": bool(
-                    base_exp is not None and base_exp > 0 and (exp is None or exp <= 0)
-                ),
+                "collapsed": bool(base_exp is not None and base_exp > 0 and (exp is None or exp <= 0)),
             }
         )
 
-    # restore
-    for (mid, a), ov in originals.items():
-        for _, aa, mm, _ in perturbations:
-            if id(mm) == mid and aa == a:
-                setattr(mm, aa, ov)
+    # Restore context params
+    for a, (m, ov) in originals.items():
+        setattr(m, a, ov)
     clear_v11_cache()
+
+    # Stop-distance perturbations — reuse baseline context (signal unchanged)
+    stop_orig = sv11.V11_ATR_STOP_MULT
+    for value in (1.25, 1.75):
+        print(f"    perturb stop_atr_mult={value}...", flush=True)
+        sv11.V11_ATR_STOP_MULT = value
+        trades = _run_all(series_4h, daily_map, weekly_map, baseline_ctx, macro, diag_inst)
+        exp = _exp(trades)
+        results.append(
+            {
+                "perturbation": f"stop_atr_mult={value}",
+                "n": len(trades),
+                "expectancy": exp,
+                "delta_vs_frozen": (exp - base_exp) if exp is not None and base_exp is not None else None,
+                "positive": bool(exp is not None and exp > 0),
+                "collapsed": bool(base_exp is not None and base_exp > 0 and (exp is None or exp <= 0)),
+            }
+        )
+    sv11.V11_ATR_STOP_MULT = stop_orig
+
     return {
         "frozen_baseline_expectancy": base_exp,
         "frozen_baseline_n": len(baseline),
+        "diagnostic_universe": diag_inst,
         "rows": results,
         "any_collapse": any(r.get("collapsed") for r in results),
-        "note": "Diagnostic only. Frozen E3 remains the candidate regardless of these results.",
+        "note": "Diagnostic only on DEV universe. Frozen E3 remains the candidate regardless.",
     }
 
 
@@ -485,14 +506,12 @@ def build_v13_payload(
 
     print("  V13: cost stress...", flush=True)
     cost_rows = []
+    # Simulate once at 1x then rescale (cost_r scales linearly)
+    base_all = all_trades
+    base_val = val
     for cm in V13_COST_MULTS:
-        t = _run_all(series_4h, daily_map, weekly_map, {}, macro, instruments, cost_mult=cm)
-        # Also on VAL window for gate continuity
-        t_val = run_spec_on_map(
-            series_4h, FROZEN_E3_SPEC, V13_STOCK_DEV, {}, macro,
-            daily_map=daily_map, weekly_map=weekly_map,
-            start_frac=V13_TRAIN_END, end_frac=V13_VAL_END, cost_mult=cm,
-        )
+        t = [rescale_cost(x, cm) for x in base_all] if cm != 1.0 else base_all
+        t_val = [rescale_cost(x, cm) for x in base_val] if cm != 1.0 else base_val
         cost_rows.append(
             {
                 "cost_mult": cm,

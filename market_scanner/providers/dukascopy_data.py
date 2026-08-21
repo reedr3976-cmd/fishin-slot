@@ -129,16 +129,21 @@ def fetch_hourly_cached(
         y_end = min(end, datetime(year, 12, 31, 23, 59, tzinfo=timezone.utc))
         cache_file = cache_dir / f"{instrument_key}_1h_{year}.npz"
         loaded = False
-        if cache_file.exists() and meta.get(str(year)) == "ok":
-            z = np.load(cache_file)
-            ts, o, h, l, c, v = z["ts"], z["o"], z["h"], z["l"], z["c"], z["v"]
-            # Invalidate legacy cache written with wrong timestamp scaling (ms treated as ns)
-            if len(ts) and int(ts.max()) < 1_000_000_000:
-                meta[str(year)] = "bad_ts"
-                cache_file.unlink(missing_ok=True)
-                meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
-            else:
+        if cache_file.exists() and meta.get(str(year)) in ("ok", "empty"):
+            if meta.get(str(year)) == "empty":
+                ts = np.array([], dtype=np.int64)
+                o = h = l = c = v = ts
                 loaded = True
+            else:
+                z = np.load(cache_file)
+                ts, o, h, l, c, v = z["ts"], z["o"], z["h"], z["l"], z["c"], z["v"]
+                # Invalidate legacy cache written with wrong timestamp scaling (ms treated as ns)
+                if len(ts) and int(ts.max()) < 1_000_000_000:
+                    meta[str(year)] = "bad_ts"
+                    cache_file.unlink(missing_ok=True)
+                    meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
+                else:
+                    loaded = True
         if not loaded:
             print(f"    duka fetch {instrument_key} {year}...", flush=True)
             ts, o, h, l, c, v = _fetch_hourly_range(instrument_key, y_start, y_end)
